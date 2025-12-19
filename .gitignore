@@ -1,0 +1,41 @@
+# Maven
+**/target/
+**/classes/
+**/dependency/
+
+# Gradle
+.gradle/
+
+# Node
+node_modules/
+npm-debug.log
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Local JDK, m2 and caches
+.jdk/
+.m2/
+.jrebel/
+
+# logs and env
+*.log
+*.env
+
+# build artifacts
+/dist/
