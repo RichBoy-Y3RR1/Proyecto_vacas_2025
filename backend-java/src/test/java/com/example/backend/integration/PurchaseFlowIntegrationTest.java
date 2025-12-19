@@ -50,7 +50,7 @@ public class PurchaseFlowIntegrationTest {
         assertEquals(new BigDecimal("1.4985").setScale(4), fees.platformFee().setScale(4));
         assertEquals(new BigDecimal("8.4915").setScale(4), fees.companyAmount().setScale(4));
 
-        // perform DB inserts/updates
+        //inserts iniciales
         conn.setAutoCommit(false);
         try {
             try (java.sql.PreparedStatement ps = conn.prepareStatement("INSERT INTO Compra (usuario_id, videojuego_id, total, platform_commission, company_amount) VALUES (?,?,?,?,?)", java.sql.PreparedStatement.RETURN_GENERATED_KEYS)){
