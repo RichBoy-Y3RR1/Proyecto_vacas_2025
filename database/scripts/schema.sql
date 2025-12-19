@@ -97,7 +97,7 @@ CREATE TABLE Cartera (
   FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE
 );
 
--- Grupo familiar (opcional)
+-- Grupo familiar 
 CREATE TABLE Grupo_Familiar (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(150),
@@ -128,7 +128,7 @@ CREATE TABLE Comision_Empresa (
   FOREIGN KEY (empresa_id) REFERENCES Empresa(id)
 );
 
--- Trigger: si la comision global baja, ajustar las comisiones empresa > nueva global
+--  si la comision global baja, ajustar las comisiones empresa > nueva global
 DELIMITER $$
 CREATE TRIGGER trg_comision_global_after_update
 AFTER UPDATE ON Comision_Global
