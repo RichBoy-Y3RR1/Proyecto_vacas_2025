@@ -41,7 +41,7 @@
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
       <version>2.2.222</version>
-      <scope>test</scope>
+      <!-- include H2 in the packaged WAR so in-memory fallback works when MySQL not available -->
     </dependency>
   </dependencies>
   <build>
@@ -53,6 +53,11 @@
         <version>3.1.2</version>
         <configuration>
           <useModulePath>false</useModulePath>
+          <environmentVariables>
+            <DB_URL>jdbc:h2:mem:tienda;DB_CLOSE_DELAY=-1;MODE=MySQL;DB_CLOSE_ON_EXIT=FALSE</DB_URL>
+            <DB_USER>sa</DB_USER>
+            <DB_PASS></DB_PASS>
+          </environmentVariables>
         </configuration>
       </plugin>
       <plugin>
@@ -60,7 +65,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
         <configuration>
-          <release>17</release>
+          <release>19</release>
         </configuration>
       </plugin>
     </plugins>

@@ -39,4 +39,22 @@ public class JdbcEmpresaDAO implements EmpresaDAO {
         }
         return list;
     }
+
+    @Override
+    public boolean update(Integer id, CompanyUser data) throws Exception {
+        try (Connection conn = DBConnection.getConnection()){
+            PreparedStatement ps = conn.prepareStatement("UPDATE Empresa SET nombre=?, correo=?, telefono=?, estado=? WHERE id=?");
+            ps.setString(1, data.getName()); ps.setString(2, data.getEmail()); ps.setString(3, null); ps.setString(4, "ACTIVA"); ps.setInt(5, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean delete(Integer id) throws Exception {
+        try (Connection conn = DBConnection.getConnection()){
+            PreparedStatement ps = conn.prepareStatement("DELETE FROM Empresa WHERE id = ?");
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
 }

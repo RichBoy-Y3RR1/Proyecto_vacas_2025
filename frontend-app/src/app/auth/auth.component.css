@@ -1,0 +1,8 @@
+.auth { padding: 0.75rem }
+.auth label { display:block; margin-bottom:0.5rem }
+.auth input, .auth select { width:100%; padding:0.4rem; margin-top:0.2rem }
+.muted { color:#666 }
+.reg-buttons{display:flex;gap:8px;margin-bottom:8px}
+.reg-buttons button{flex:1}
+.admin-panel{margin-top:12px;padding:8px;border-top:1px dashed #ddd}
+.muted{color:#666;font-size:13px}

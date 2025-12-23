@@ -1,0 +1,38 @@
+:host {
+	display: block;
+	font-family: Arial, Helvetica, sans-serif;
+	color: #333;
+}
+
+.toolbar {
+	background: #1976d2;
+	color: #fff;
+	padding: 12px 16px;
+}
+
+.toolbar h1 {
+	margin: 0;
+	font-size: 18px;
+}
+
+.app-layout {
+	display: flex;
+	gap: 24px;
+	padding: 16px;
+	max-width: 1100px;
+	margin: 20px auto;
+}
+
+.auth {
+	flex: 0 0 340px;
+}
+
+.videojuegos {
+	flex: 1 1 auto;
+}
+
+@media (max-width: 800px) {
+	.app-layout { flex-direction: column; padding: 12px; }
+	.auth { flex: none; width: 100%; }
+}
+

@@ -1,0 +1,26 @@
+<div class="vg-wrap">
+  <h2>Videojuegos</h2>
+
+  <div *ngIf="error" class="msg error">{{ error }}</div>
+  <div *ngIf="loading" class="msg info">Cargando...</div>
+
+  <ul *ngIf="!loading">
+    <li *ngFor="let v of videojuegos"> 
+      <strong>{{ v.nombre }}</strong> — {{ v.descripcion || '-' }} — <em>{{ v.precio }}</em>
+    </li>
+  </ul>
+
+  <h3>Crear nuevo</h3>
+  <div class="form">
+    <div *ngIf="!canCreate" class="muted">No tienes permisos para crear videojuegos. (Sólo ADMIN o EMPRESA)</div>
+    <div *ngIf="canCreate">
+      <label>Nombre <input [(ngModel)]="nombre" /></label>
+      <label>Descripción <input [(ngModel)]="descripcion" /></label>
+      <label>Precio <input type="number" [(ngModel)]="precio" /></label>
+      <div class="actions">
+        <button (click)="create()" [disabled]="creating">{{ creating ? 'Creando...' : 'Crear' }}</button>
+        <button (click)="load()">Refrescar</button>
+      </div>
+    </div>
+  </div>
+</div>

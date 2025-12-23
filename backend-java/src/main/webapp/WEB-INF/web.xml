@@ -6,6 +6,16 @@
 
   <display-name>Tienda Videojuegos Backend</display-name>
 
+  <filter>
+    <filter-name>CorsFilter</filter-name>
+    <filter-class>others.CorsFilter</filter-class>
+  </filter>
+
+  <filter-mapping>
+    <filter-name>CorsFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
   <servlet>
     <servlet-name>VideojuegoServlet</servlet-name>
     <servlet-class>com.example.backend.servlets.VideojuegoServlet</servlet-class>
@@ -14,6 +24,26 @@
   <servlet-mapping>
     <servlet-name>VideojuegoServlet</servlet-name>
     <url-pattern>/api/videojuegos/*</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>UsuarioServlet</servlet-name>
+    <servlet-class>com.example.backend.servlets.UsuarioServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>UsuarioServlet</servlet-name>
+    <url-pattern>/api/usuarios/*</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>EmpresaServlet</servlet-name>
+    <servlet-class>com.example.backend.servlets.EmpresaServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>EmpresaServlet</servlet-name>
+    <url-pattern>/api/empresas/*</url-pattern>
   </servlet-mapping>
 
 </web-app>

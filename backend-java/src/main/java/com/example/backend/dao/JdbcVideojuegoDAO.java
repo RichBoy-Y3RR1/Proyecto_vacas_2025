@@ -66,4 +66,34 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
             return ps.executeUpdate() > 0;
         }
     }
+
+    @Override
+    public Videojuego findById(Integer id) throws Exception {
+        try (Connection conn = DBConnection.getConnection()){
+            PreparedStatement ps = conn.prepareStatement("SELECT v.id, v.nombre, v.descripcion, v.precio, v.estado, e.nombre AS empresa, v.edad_clasificacion FROM Videojuego v JOIN Empresa e ON v.empresa_id = e.id WHERE v.id = ?");
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()){
+                Videojuego v = new Videojuego();
+                v.setId(rs.getInt("id"));
+                v.setNombre(rs.getString("nombre"));
+                v.setDescripcion(rs.getString("descripcion"));
+                v.setPrecio(rs.getBigDecimal("precio"));
+                v.setEstado(rs.getString("estado"));
+                v.setEmpresa(rs.getString("empresa"));
+                v.setEdad_clasificacion(rs.getString("edad_clasificacion"));
+                return v;
+            }
+            return null;
+        }
+    }
+
+    @Override
+    public boolean delete(Integer id) throws Exception {
+        try (Connection conn = DBConnection.getConnection()){
+            PreparedStatement ps = conn.prepareStatement("DELETE FROM Videojuego WHERE id = ?");
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
 }

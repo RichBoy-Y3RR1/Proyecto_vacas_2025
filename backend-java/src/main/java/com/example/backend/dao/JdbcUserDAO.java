@@ -24,7 +24,7 @@ public class JdbcUserDAO implements UserDAO {
             if (user instanceof Gamer){
                 Gamer g = (Gamer) user;
                 ps.setString(4, g.getNickname());
-                ps.setDate(5, java.sql.Date.valueOf(g.getBirthDate()));
+                if (g.getBirthDate() != null) ps.setDate(5, java.sql.Date.valueOf(g.getBirthDate())); else ps.setDate(5, null);
                 ps.setString(6, null);
                 ps.setString(7, g.getCountry());
             } else if (user instanceof CompanyUser){
@@ -95,8 +95,33 @@ public class JdbcUserDAO implements UserDAO {
     }
 
     @Override
-    public boolean update(AbstractUser user) throws Exception { return false; }
+    public boolean update(AbstractUser user) throws Exception {
+        try (Connection conn = DBConnection.getConnection()){
+            PreparedStatement ps = conn.prepareStatement("UPDATE Usuario SET correo=?, password=?, role=?, nickname=?, fecha_nacimiento=?, telefono=?, pais=? WHERE id=?");
+            ps.setString(1, user.getEmail());
+            ps.setString(2, user.getPasswordHash());
+            ps.setString(3, user.getRole());
+            String nickname = null; java.sql.Date birth = null; String telefono = null; String pais = null;
+            if (user instanceof Gamer){
+                Gamer g = (Gamer) user; nickname = g.getNickname(); if (g.getBirthDate()!=null) birth = java.sql.Date.valueOf(g.getBirthDate()); pais = g.getCountry();
+            } else if (user instanceof CompanyUser){
+                CompanyUser cu = (CompanyUser) user; nickname = cu.getName();
+            }
+            ps.setString(4, nickname);
+            ps.setDate(5, birth);
+            ps.setString(6, telefono);
+            ps.setString(7, pais);
+            ps.setInt(8, user.getId());
+            return ps.executeUpdate() > 0;
+        }
+    }
 
     @Override
-    public boolean delete(Integer id) throws Exception { return false; }
+    public boolean delete(Integer id) throws Exception {
+        try (Connection conn = DBConnection.getConnection()){
+            PreparedStatement ps = conn.prepareStatement("DELETE FROM Usuario WHERE id = ?");
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
 }

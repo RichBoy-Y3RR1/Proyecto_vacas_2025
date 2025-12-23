@@ -1,0 +1,34 @@
+<div class="auth card">
+  <div *ngIf="user; else loggedout">
+    <p><strong>{{user.nickname || user.email}}</strong> — <em>{{user.role}}</em></p>
+    <button (click)="logout()">Cerrar sesión</button>
+  </div>
+  <ng-template #loggedout>
+    <h3>Login</h3>
+    <form (ngSubmit)="submitLogin()" [formGroup]="loginForm">
+      <label>Email <input formControlName="email"></label>
+      <label>Contraseña <input type="password" formControlName="password"></label>
+      <button type="submit">Entrar</button>
+    </form>
+    <h3>Registro</h3>
+    <div class="reg-buttons">
+      <button (click)="regForm.patchValue({role:'USUARIO'}); registerGamer()">Registrar Gamer</button>
+      <button (click)="regForm.patchValue({role:'EMPRESA'}); registerEmpresa()">Registrar Empresa</button>
+    </div>
+    <div class="reg-forms">
+      <label>Email <input [(ngModel)]="regForm.value.email" [ngModelOptions]="{standalone:true}"></label>
+      <label>Contraseña <input type="password" [(ngModel)]="regForm.value.password" [ngModelOptions]="{standalone:true}"></label>
+      <label *ngIf="regForm.value.role==='USUARIO'">Nickname <input [(ngModel)]="regForm.value.nickname" [ngModelOptions]="{standalone:true}"></label>
+      <label *ngIf="regForm.value.role==='EMPRESA'">Nombre Empresa <input [(ngModel)]="regForm.value.name" [ngModelOptions]="{standalone:true}"></label>
+    </div>
+  </ng-template>
+  <p class="muted">{{message}}</p>
+
+  <div *ngIf="user && user.role==='ADMIN'" class="admin-panel">
+    <h4>Panel Admin</h4>
+    <button (click)="loadUsers()">Listar usuarios</button>
+    <ul>
+      <li *ngFor="let u of users">{{u.email}} — {{u.role}}</li>
+    </ul>
+  </div>
+</div>
