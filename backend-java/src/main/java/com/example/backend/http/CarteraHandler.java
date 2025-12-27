@@ -20,21 +20,24 @@ public class CarteraHandler implements HttpHandler {
             String method = ex.getRequestMethod();
             String path = ex.getRequestURI().getPath();
             if (path.endsWith("/") && path.length()>1) path = path.substring(0, path.length()-1);
-            String base = "/backend/api/cartera";
+            String suffix = "/api/cartera";
 
-            if ("GET".equalsIgnoreCase(method) && path.equals(base)){
-                var rs = conn.createStatement().executeQuery("SELECT id_cartera, usuario_id, saldo FROM Cartera");
+            if ("GET".equalsIgnoreCase(method) && path.endsWith(suffix)){
+                var rs = conn.createStatement().executeQuery("SELECT id, usuario_id, saldo FROM Cartera");
                 java.util.List<java.util.Map<String,Object>> list = new java.util.ArrayList<>();
-                while (rs.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rs.getInt("id_cartera")); m.put("usuario_id", rs.getInt("usuario_id")); m.put("saldo", rs.getBigDecimal("saldo")); list.add(m); }
+                while (rs.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rs.getInt("id")); m.put("usuario_id", rs.getInt("usuario_id")); m.put("saldo", rs.getBigDecimal("saldo")); list.add(m); }
                 write(ex,200,gson.toJson(list)); return;
             }
 
-            if ("POST".equalsIgnoreCase(method) && path.equals(base)){
+            if ("POST".equalsIgnoreCase(method) && path.endsWith(suffix)){
                 var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);
-                Integer usuarioId = body.get("usuario_id") instanceof Number ? ((Number)body.get("usuario_id")).intValue() : null; java.math.BigDecimal saldo = body.get("saldo") instanceof Number ? new java.math.BigDecimal(((Number)body.get("saldo")).toString()) : new java.math.BigDecimal("0");
+                Integer usuarioId = null; java.math.BigDecimal saldo = new java.math.BigDecimal("0");
+                try { Object uo = body.get("usuario_id"); if (uo instanceof Number) usuarioId = ((Number)uo).intValue(); else usuarioId = Integer.parseInt(String.valueOf(uo)); } catch(Exception _e) { }
+                try { Object so = body.get("saldo"); if (so instanceof Number) saldo = new java.math.BigDecimal(((Number)so).toString()); else saldo = new java.math.BigDecimal(String.valueOf(so)); } catch(Exception _e) { }
+                if (usuarioId == null) { write(ex,400,gson.toJson(java.util.Map.of("error","usuario_id required"))); return; }
                 var ps = conn.prepareStatement("INSERT INTO Cartera (usuario_id, saldo) VALUES (?,?)", java.sql.PreparedStatement.RETURN_GENERATED_KEYS);
                 ps.setInt(1, usuarioId); ps.setBigDecimal(2, saldo); ps.executeUpdate(); var rs = ps.getGeneratedKeys(); Integer id = null; if (rs.next()) id = rs.getInt(1);
-                write(ex,200,gson.toJson(java.util.Map.of("id", id))); return;
+                write(ex,201,gson.toJson(java.util.Map.of("id", id))); return;
             }
 
             write(ex,405,gson.toJson(java.util.Map.of("error","method not allowed")));

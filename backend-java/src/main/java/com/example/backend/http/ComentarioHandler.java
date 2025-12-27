@@ -26,8 +26,8 @@ public class ComentarioHandler implements HttpHandler {
             String method = ex.getRequestMethod();
             String path = ex.getRequestURI().getPath();
             if (path.endsWith("/") && path.length()>1) path = path.substring(0, path.length()-1);
-            String base = "/backend/api/comentarios";
-            if ("GET".equalsIgnoreCase(method) && path.equals(base)){
+            String suffix = "/api/comentarios";
+            if ("GET".equalsIgnoreCase(method) && path.endsWith(suffix)){
                 try (Connection conn = DBConnection.getConnection()){
                     ResultSet rs = conn.createStatement().executeQuery("SELECT id, usuario_id, videojuego_id, texto, puntuacion, fecha, visible FROM Comentario");
                     List<Comentario> list = new ArrayList<>();
@@ -42,13 +42,13 @@ public class ComentarioHandler implements HttpHandler {
                 }
             }
 
-            if ("POST".equalsIgnoreCase(method) && path.equals(base)){
+            if ("POST".equalsIgnoreCase(method) && path.endsWith(suffix)){
                 Comentario body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), Comentario.class);
                 try (Connection conn = DBConnection.getConnection()){
                     PreparedStatement ps = conn.prepareStatement("INSERT INTO Comentario (usuario_id, videojuego_id, texto, puntuacion) VALUES (?,?,?,?)", PreparedStatement.RETURN_GENERATED_KEYS);
                     ps.setInt(1, body.getUsuario_id()); ps.setInt(2, body.getVideojuego_id()); ps.setString(3, body.getTexto()); ps.setInt(4, body.getPuntuacion() != null ? body.getPuntuacion() : 0);
                     ps.executeUpdate(); ResultSet rs = ps.getGeneratedKeys(); Integer id = null; if (rs.next()) id = rs.getInt(1);
-                    write(ex,200,gson.toJson(java.util.Collections.singletonMap("id", id))); return;
+                    write(ex,201,gson.toJson(java.util.Collections.singletonMap("id", id))); return;
                 }
             }
 

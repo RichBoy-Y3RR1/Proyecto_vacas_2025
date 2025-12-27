@@ -20,16 +20,23 @@ public class BannerHandler implements HttpHandler {
             String method = ex.getRequestMethod();
             String path = ex.getRequestURI().getPath();
             if (path.endsWith("/") && path.length()>1) path = path.substring(0, path.length()-1);
-            String base = "/backend/api/banner";
+            String suffix = "/api/banner";
 
-            if ("GET".equalsIgnoreCase(method) && path.equals(base)){
+            if ("OPTIONS".equalsIgnoreCase(method)) { ex.getResponseHeaders().set("Access-Control-Allow-Methods","GET,POST,PUT,DELETE,OPTIONS"); ex.getResponseHeaders().set("Access-Control-Allow-Headers","Content-Type,Authorization"); write(ex,204,""); return; }
+
+            if ("GET".equalsIgnoreCase(method) && path.endsWith(suffix)){
                 var rs = conn.createStatement().executeQuery("SELECT id, url_imagen, fecha_inicio, fecha_fin FROM Banner");
                 java.util.List<java.util.Map<String,Object>> list = new java.util.ArrayList<>();
                 while (rs.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rs.getInt("id")); m.put("url_imagen", rs.getString("url_imagen")); m.put("fecha_inicio", rs.getTimestamp("fecha_inicio")); m.put("fecha_fin", rs.getTimestamp("fecha_fin")); list.add(m); }
                 write(ex,200,gson.toJson(list)); return;
             }
+            // GET by id, PUT, DELETE
+            if ("GET".equalsIgnoreCase(method) && path.contains(suffix + "/")){
+                String idStr = path.substring(path.lastIndexOf('/')+1);
+                try { Integer id = Integer.parseInt(idStr); var rs = conn.createStatement().executeQuery("SELECT id, url_imagen, fecha_inicio, fecha_fin FROM Banner WHERE id="+id); if (rs.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rs.getInt("id")); m.put("url_imagen", rs.getString("url_imagen")); m.put("fecha_inicio", rs.getTimestamp("fecha_inicio")); m.put("fecha_fin", rs.getTimestamp("fecha_fin")); write(ex,200,gson.toJson(m)); } else { write(ex,404,gson.toJson(java.util.Map.of("error","not_found"))); } return; } catch(Exception exx) { /* fallthrough */ }
+            }
 
-            if ("POST".equalsIgnoreCase(method) && path.equals(base)){
+            if ("POST".equalsIgnoreCase(method) && path.endsWith(suffix)){
                 var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);
                 String url = (String) body.get("url_imagen"); String inicio = (String) body.getOrDefault("fecha_inicio", null); String fin = (String) body.getOrDefault("fecha_fin", null);
                 var ps = conn.prepareStatement("INSERT INTO Banner (url_imagen, fecha_inicio, fecha_fin) VALUES (?,?,?)", java.sql.PreparedStatement.RETURN_GENERATED_KEYS);
@@ -37,7 +44,21 @@ public class BannerHandler implements HttpHandler {
                 if (inicio!=null) ps.setString(2,inicio); else ps.setNull(2, java.sql.Types.VARCHAR);
                 if (fin!=null) ps.setString(3,fin); else ps.setNull(3, java.sql.Types.VARCHAR);
                 ps.executeUpdate(); var rs = ps.getGeneratedKeys(); Integer id = null; if (rs.next()) id = rs.getInt(1);
-                write(ex,200,gson.toJson(java.util.Map.of("id", id))); return;
+                write(ex,201,gson.toJson(java.util.Map.of("id", id))); return;
+            }
+
+            if ("PUT".equalsIgnoreCase(method) && path.contains(suffix + "/")){
+                String idStr = path.substring(path.lastIndexOf('/')+1);
+                Integer id = Integer.parseInt(idStr);
+                var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);
+                String url = (String) body.get("url_imagen"); String inicio = (String) body.getOrDefault("fecha_inicio", null); String fin = (String) body.getOrDefault("fecha_fin", null);
+                var ps = conn.prepareStatement("UPDATE Banner SET url_imagen = ?, fecha_inicio = ?, fecha_fin = ? WHERE id = ?");
+                ps.setString(1, url); if (inicio!=null) ps.setString(2,inicio); else ps.setNull(2, java.sql.Types.VARCHAR); if (fin!=null) ps.setString(3,fin); else ps.setNull(3, java.sql.Types.VARCHAR); ps.setInt(4,id); int updated = ps.executeUpdate(); write(ex,200,gson.toJson(java.util.Map.of("updated", updated))); return;
+            }
+
+            if ("DELETE".equalsIgnoreCase(method) && path.contains(suffix + "/")){
+                String idStr = path.substring(path.lastIndexOf('/')+1); Integer id = Integer.parseInt(idStr);
+                var ps = conn.prepareStatement("DELETE FROM Banner WHERE id = ?"); ps.setInt(1,id); int deleted = ps.executeUpdate(); write(ex,200,gson.toJson(java.util.Map.of("deleted", deleted))); return;
             }
 
             write(ex,405,gson.toJson(java.util.Map.of("error","method not allowed")));

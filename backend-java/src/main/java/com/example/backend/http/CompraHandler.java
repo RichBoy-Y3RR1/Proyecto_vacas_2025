@@ -26,11 +26,13 @@ public class CompraHandler implements HttpHandler {
             String method = ex.getRequestMethod();
             String path = ex.getRequestURI().getPath();
             if (path.endsWith("/") && path.length()>1) path = path.substring(0, path.length()-1);
-            String base = "/backend/api/compras";
-            if ("POST".equalsIgnoreCase(method) && path.equals(base)){
+            String suffix = "/api/compras";
+            if ("POST".equalsIgnoreCase(method) && path.endsWith(suffix)){
                 var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);
-                Integer usuarioId = ((Number)body.get("usuario_id")).intValue();
-                Integer videojuegoId = ((Number)body.get("videojuego_id")).intValue();
+                Integer usuarioId = null; Integer videojuegoId = null;
+                try { Object uo = body.get("usuario_id"); if (uo instanceof Number) usuarioId = ((Number)uo).intValue(); else usuarioId = Integer.parseInt(String.valueOf(uo)); } catch(Exception _e){ }
+                try { Object vo = body.get("videojuego_id"); if (vo instanceof Number) videojuegoId = ((Number)vo).intValue(); else videojuegoId = Integer.parseInt(String.valueOf(vo)); } catch(Exception _e){ }
+                if (usuarioId == null || videojuegoId == null){ write(ex,400,gson.toJson(java.util.Collections.singletonMap("error","usuario_id and videojuego_id required"))); return; }
                 try (Connection conn = DBConnection.getConnection()){
                     conn.setAutoCommit(false);
                     try {

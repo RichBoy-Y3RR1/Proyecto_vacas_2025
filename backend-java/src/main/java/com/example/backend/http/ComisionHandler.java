@@ -20,21 +20,35 @@ public class ComisionHandler implements HttpHandler {
             String method = ex.getRequestMethod();
             String path = ex.getRequestURI().getPath();
             if (path.endsWith("/") && path.length()>1) path = path.substring(0, path.length()-1);
-            String base = "/backend/api/comision";
+            String[] suffixes = new String[]{"/api/comision","/api/comisiones"};
 
-            if ("GET".equalsIgnoreCase(method) && path.equals(base)){
+            if ("OPTIONS".equalsIgnoreCase(method)) { ex.getResponseHeaders().set("Access-Control-Allow-Methods","GET,POST,PUT,DELETE,OPTIONS"); ex.getResponseHeaders().set("Access-Control-Allow-Headers","Content-Type,Authorization"); write(ex,204,""); return; }
+
+            if ("GET".equalsIgnoreCase(method) && (path.endsWith(suffixes[0]) || path.endsWith(suffixes[1]))){
                 var rs = conn.createStatement().executeQuery("SELECT id, porcentaje FROM Comision");
                 java.util.List<java.util.Map<String,Object>> list = new java.util.ArrayList<>();
                 while (rs.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rs.getInt("id")); m.put("porcentaje", rs.getBigDecimal("porcentaje")); list.add(m); }
                 write(ex,200,gson.toJson(list)); return;
             }
-
-            if ("POST".equalsIgnoreCase(method) && path.equals(base)){
+            if ("POST".equalsIgnoreCase(method) && (path.endsWith(suffixes[0]) || path.endsWith(suffixes[1]))){
                 var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);
                 java.math.BigDecimal pct = body.get("porcentaje") instanceof Number ? new java.math.BigDecimal(((Number)body.get("porcentaje")).toString()) : new java.math.BigDecimal("0");
                 var ps = conn.prepareStatement("INSERT INTO Comision (porcentaje) VALUES (?)", java.sql.PreparedStatement.RETURN_GENERATED_KEYS);
                 ps.setBigDecimal(1, pct); ps.executeUpdate(); var rs = ps.getGeneratedKeys(); Integer id = null; if (rs.next()) id = rs.getInt(1);
-                write(ex,200,gson.toJson(java.util.Map.of("id", id))); return;
+                write(ex,201,gson.toJson(java.util.Map.of("id", id))); return;
+            }
+
+            // update by id
+            if ("PUT".equalsIgnoreCase(method) && (path.contains(suffixes[0] + "/") || path.contains(suffixes[1] + "/"))){
+                String idStr = path.substring(path.lastIndexOf('/')+1); Integer id = Integer.parseInt(idStr);
+                var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);
+                java.math.BigDecimal pct = body.get("porcentaje") instanceof Number ? new java.math.BigDecimal(((Number)body.get("porcentaje")).toString()) : new java.math.BigDecimal("0");
+                var ps = conn.prepareStatement("UPDATE Comision SET porcentaje = ? WHERE id = ?"); ps.setBigDecimal(1,pct); ps.setInt(2,id); int updated = ps.executeUpdate(); write(ex,200,gson.toJson(java.util.Map.of("updated", updated))); return;
+            }
+
+            if ("DELETE".equalsIgnoreCase(method) && (path.contains(suffixes[0] + "/") || path.contains(suffixes[1] + "/"))){
+                String idStr = path.substring(path.lastIndexOf('/')+1); Integer id = Integer.parseInt(idStr);
+                var ps = conn.prepareStatement("DELETE FROM Comision WHERE id = ?"); ps.setInt(1,id); int deleted = ps.executeUpdate(); write(ex,200,gson.toJson(java.util.Map.of("deleted", deleted))); return;
             }
 
             write(ex,405,gson.toJson(java.util.Map.of("error","method not allowed")));
