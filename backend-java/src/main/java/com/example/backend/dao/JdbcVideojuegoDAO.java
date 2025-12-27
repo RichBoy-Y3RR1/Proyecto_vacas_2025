@@ -14,7 +14,7 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
     public List<Videojuego> listAll() throws Exception {
         List<Videojuego> list = new ArrayList<>();
         try (Connection conn = DBConnection.getConnection()){
-            ResultSet rs = conn.createStatement().executeQuery("SELECT v.id, v.nombre, v.descripcion, v.precio, v.estado, e.nombre AS empresa, v.edad_clasificacion FROM Videojuego v JOIN Empresa e ON v.empresa_id = e.id");
+            ResultSet rs = conn.createStatement().executeQuery("SELECT v.id, v.nombre, v.descripcion, v.precio, v.estado, e.nombre AS empresa, v.edad_clasificacion, v.empresa_id FROM Videojuego v JOIN Empresa e ON v.empresa_id = e.id");
             while (rs.next()){
                 Videojuego v = new Videojuego();
                 v.setId(rs.getInt("id"));
@@ -23,6 +23,7 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
                 v.setPrecio(rs.getBigDecimal("precio"));
                 v.setEstado(rs.getString("estado"));
                 v.setEmpresa(rs.getString("empresa"));
+                v.setEmpresaId(rs.getInt("empresa_id"));
                 v.setEdad_clasificacion(rs.getString("edad_clasificacion"));
                 list.add(v);
             }
@@ -36,8 +37,8 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
             PreparedStatement ps = conn.prepareStatement("INSERT INTO Videojuego (nombre, descripcion, empresa_id, precio, estado, fecha_lanzamiento, edad_clasificacion) VALUES (?,?,?,?,?,NULL,?)", PreparedStatement.RETURN_GENERATED_KEYS);
             ps.setString(1, data.getNombre());
             ps.setString(2, data.getDescripcion());
-            // use default empresa_id = 1 when none provided
-            ps.setInt(3, 1);
+            // use empresaId from payload when provided, otherwise default to 1
+            ps.setInt(3, data.getEmpresaId() != null ? data.getEmpresaId() : 1);
             ps.setBigDecimal(4, data.getPrecio() != null ? data.getPrecio() : new java.math.BigDecimal("0"));
             ps.setString(5, "PUBLICADO");
             ps.setString(6, data.getEdad_clasificacion());
@@ -70,7 +71,7 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
     @Override
     public Videojuego findById(Integer id) throws Exception {
         try (Connection conn = DBConnection.getConnection()){
-            PreparedStatement ps = conn.prepareStatement("SELECT v.id, v.nombre, v.descripcion, v.precio, v.estado, e.nombre AS empresa, v.edad_clasificacion FROM Videojuego v JOIN Empresa e ON v.empresa_id = e.id WHERE v.id = ?");
+            PreparedStatement ps = conn.prepareStatement("SELECT v.id, v.nombre, v.descripcion, v.precio, v.estado, e.nombre AS empresa, v.edad_clasificacion, v.empresa_id FROM Videojuego v JOIN Empresa e ON v.empresa_id = e.id WHERE v.id = ?");
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()){
@@ -81,6 +82,7 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
                 v.setPrecio(rs.getBigDecimal("precio"));
                 v.setEstado(rs.getString("estado"));
                 v.setEmpresa(rs.getString("empresa"));
+                v.setEmpresaId(rs.getInt("empresa_id"));
                 v.setEdad_clasificacion(rs.getString("edad_clasificacion"));
                 return v;
             }

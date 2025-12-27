@@ -14,7 +14,25 @@ public class ReportServlet extends BaseServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         setCors(resp);
         try (Connection conn = DBConnection.getConnection()){
-            //reporte de comisiones y ventas totales
+            String format = req.getParameter("format");
+            if (format != null && format.equalsIgnoreCase("pdf")) {
+                // Generate Jasper PDF using the JDBC connection and JRXML in resources
+                try (java.io.InputStream jr = getClass().getClassLoader().getResourceAsStream("reports/sales_report.jrxml")){
+                    if (jr == null) throw new RuntimeException("Report template not found");
+                    net.sf.jasperreports.engine.JasperReport jasper = net.sf.jasperreports.engine.JasperCompileManager.compileReport(jr);
+                    java.util.Map<String,Object> params = new java.util.HashMap<>();
+                    net.sf.jasperreports.engine.JasperPrint jasperPrint = net.sf.jasperreports.engine.JasperFillManager.fillReport(jasper, params, conn);
+                    resp.setContentType("application/pdf");
+                    resp.setHeader("Content-Disposition", "inline; filename=report.pdf");
+                    try (java.io.OutputStream out = resp.getOutputStream()) {
+                        net.sf.jasperreports.engine.JasperExportManager.exportReportToPdfStream(jasperPrint, out);
+                        out.flush();
+                    }
+                    return;
+                }
+            }
+
+            // default JSON report (existing behavior)
             var rs = conn.createStatement().executeQuery("SELECT SUM(total) AS total_revenue, SUM(platform_commission) AS total_commission FROM Compra");
             java.util.Map<String,Object> out = new java.util.HashMap<>();
             if (rs.next()){

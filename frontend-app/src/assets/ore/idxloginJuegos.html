@@ -4,36 +4,25 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login Juegos — Demo</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;background:#f5f7fb;margin:0;color:#222}
-    .wrap{max-width:980px;margin:28px auto;padding:18px;background:#fff;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.06)}
-    h1{margin:0 0 12px;color:#0b63d6}
-    .cols{display:flex;gap:18px}
-    .col{flex:1}
-    label{display:block;margin:8px 0}
-    input,select{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px}
-    button{background:#0b63d6;color:#fff;border:none;padding:8px 12px;border-radius:4px;cursor:pointer}
-    .muted{color:#666;font-size:13px}
-    .msg{margin:8px 0;padding:8px;border-radius:4px}
-    .msg.ok{background:#e8f7ea;color:#1d7a33}
-    .msg.err{background:#ffecec;color:#a00}
-    .small{font-size:13px}
-  </style>
+  <link rel="stylesheet" href="assets/ore/login.css" />
 </head>
 <body>
-  <div class="wrap">
-    <h1>Ingreso / Registro — Tienda de Videojuegos</h1>
-    <p class="muted">Este archivo está en <code>assets/ore/idxloginJuegos.html</code>. Usa las APIs: <code>/api/auth/*</code> y <code>/api/videojuegos</code>.</p>
+  <div class="page">
+    <div class="wrap">
+      <div class="header">
+        <div class="brand">Ingreso / Registro — Tienda de Videojuegos</div>
+      </div>
+      <p class="muted">Este archivo está en <code>assets/ore/idxloginJuegos.html</code>. Usa las APIs: <code>/api/auth/*</code> y <code>/api/videojuegos</code>.</p>
 
-    <div class="cols">
+      <div class="cols">
       <div class="col" id="left">
         <h3>Iniciar sesión</h3>
         <div id="loginMsg" class="msg" style="display:none"></div>
         <label>Email <input id="loginEmail" type="email" /></label>
         <label>Contraseña <input id="loginPassword" type="password" /></label>
-        <div style="display:flex;gap:8px;margin-top:8px">
+        <div class="actions">
           <button id="btnLogin">Entrar</button>
-          <button id="btnLogout" style="display:none;background:#888">Salir</button>
+          <button id="btnLogout" class="secondary" style="display:none">Salir</button>
         </div>
 
         <hr />
@@ -46,7 +35,7 @@
         <label>Contraseña <input id="regPassword" type="password" /></label>
         <label id="labelNick">Nickname <input id="regNick" type="text" /></label>
         <label id="labelName" style="display:none">Nombre Empresa <input id="regName" type="text" /></label>
-        <div style="display:flex;gap:8px;margin-top:8px">
+        <div class="actions">
           <button id="btnRegGamer">Registrar Gamer</button>
           <button id="btnRegEmpresa">Registrar Empresa</button>
         </div>
@@ -58,9 +47,9 @@
 
         <h3 style="margin-top:16px">Videojuegos (demo)</h3>
         <div id="gamesMsg" class="msg" style="display:none"></div>
-        <div id="gamesList" class="small muted">Cargando...</div>
+        <div id="gamesList" class="games-list small muted">Cargando...</div>
 
-        <div id="createBox" style="margin-top:12px">
+        <div id="createBox" class="create-box">
           <h4>Crear videojuego</h4>
           <div id="createMsg" class="msg" style="display:none"></div>
           <label>Nombre <input id="gNombre" type="text" /></label>
@@ -70,7 +59,8 @@
       </div>
     </div>
 
-    <p class="small muted" style="margin-top:18px">Usuarios de prueba: admin@tienda.com/admin123, empresa@acme.com/empresa123, user@cliente.com/user123</p>
+      <p class="small muted" style="margin-top:18px">Usuarios de prueba: admin@tienda.com/admin123, empresa@acme.com/empresa123, user@cliente.com/user123</p>
+    </div>
   </div>
 
   <script>

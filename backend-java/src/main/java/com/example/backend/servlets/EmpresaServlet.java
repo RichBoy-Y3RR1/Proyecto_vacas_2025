@@ -31,14 +31,18 @@ public class EmpresaServlet extends BaseServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        // Only ADMIN may create companies
+        Integer tokenUser = (Integer) req.getAttribute("userId");
+        String tokenRole = (String) req.getAttribute("role");
+        if (tokenUser == null) { writeError(resp, 401, "login_required", "Authentication required"); return; }
+        if (tokenRole == null || !tokenRole.equalsIgnoreCase("ADMIN")) { writeError(resp, 403, "forbidden", "Only admin can create companies"); return; }
         try {
             CompanyUser c = gson.fromJson(req.getReader(), CompanyUser.class);
             Integer id = service.createCompany(c.getName(), c.getEmail());
             resp.setStatus(HttpServletResponse.SC_CREATED);
             writeJson(resp, Map.of("id", id));
         } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(resp, Map.of("error", e.getMessage()));
+            writeError(resp, 400, "bad_request", e.getMessage());
         }
     }
 
@@ -48,11 +52,16 @@ public class EmpresaServlet extends BaseServlet {
             Integer id = parseId(req);
             if (id == null) { resp.setStatus(HttpServletResponse.SC_BAD_REQUEST); return; }
             CompanyUser c = gson.fromJson(req.getReader(), CompanyUser.class);
+            // permission: ADMIN or company owner
+            Integer tokenCompany = (Integer) req.getAttribute("companyId");
+            String tokenRole = (String) req.getAttribute("role");
+            if (tokenRole == null || (!tokenRole.equalsIgnoreCase("ADMIN") && (tokenCompany == null || !tokenCompany.equals(id)))){
+                writeError(resp, 403, "forbidden", "Not allowed to update this company"); return;
+            }
             boolean ok = service.update(id, c);
             resp.setStatus(ok ? HttpServletResponse.SC_NO_CONTENT : HttpServletResponse.SC_NOT_FOUND);
         } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writeJson(resp, Map.of("error", e.getMessage()));
+            writeError(resp, 400, "bad_request", e.getMessage());
         }
     }
 
@@ -61,11 +70,16 @@ public class EmpresaServlet extends BaseServlet {
         try {
             Integer id = parseId(req);
             if (id == null) { resp.setStatus(HttpServletResponse.SC_BAD_REQUEST); return; }
+            // permission: ADMIN or company owner
+            Integer tokenCompany = (Integer) req.getAttribute("companyId");
+            String tokenRole = (String) req.getAttribute("role");
+            if (tokenRole == null || (!tokenRole.equalsIgnoreCase("ADMIN") && (tokenCompany == null || !tokenCompany.equals(id)))){
+                writeError(resp, 403, "forbidden", "Not allowed to delete this company"); return;
+            }
             boolean ok = service.delete(id);
             resp.setStatus(ok ? HttpServletResponse.SC_NO_CONTENT : HttpServletResponse.SC_NOT_FOUND);
         } catch (Exception e) {
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            writeJson(resp, Map.of("error", e.getMessage()));
+            writeError(resp, 500, "internal_error", e.getMessage());
         }
     }
 }

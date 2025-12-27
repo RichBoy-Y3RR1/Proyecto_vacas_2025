@@ -18,9 +18,17 @@ public class BaseServlet extends HttpServlet {
     }
 
     protected void setCors(HttpServletResponse resp){
-        resp.setHeader("Access-Control-Allow-Origin", "*");
-        resp.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-        resp.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+        // Avoid adding duplicate CORS headers if another filter/wrapper already set them.
+        String existing = resp.getHeader("Access-Control-Allow-Origin");
+        if (existing == null || existing.isEmpty()) {
+            resp.setHeader("Access-Control-Allow-Origin", "*");
+        }
+        if (resp.getHeader("Access-Control-Allow-Methods") == null) {
+            resp.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+        }
+        if (resp.getHeader("Access-Control-Allow-Headers") == null) {
+            resp.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+        }
         resp.setContentType("application/json;charset=UTF-8");
     }
 
@@ -28,6 +36,14 @@ public class BaseServlet extends HttpServlet {
         setCors(resp);
         try (PrintWriter out = resp.getWriter()){
             out.print(gson.toJson(obj));
+        }
+    }
+
+    protected void writeError(HttpServletResponse resp, int status, String code, String message) throws IOException {
+        resp.setStatus(status);
+        setCors(resp);
+        try (PrintWriter out = resp.getWriter()){
+            out.print(gson.toJson(java.util.Map.of("error", code, "message", message)));
         }
     }
 

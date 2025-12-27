@@ -19,27 +19,27 @@ public class VideojuegoHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange) {
         try {
-            exchange.getResponseHeaders().add("Content-Type", "application/json;charset=UTF-8");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Content-Type", "application/json;charset=UTF-8");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             String method = exchange.getRequestMethod();
             String path = exchange.getRequestURI().getPath();
-            // path: /backend/api/videojuegos or /backend/api/videojuegos/{id}
-            String base = "/backend/api/videojuegos";
-            if ("GET".equalsIgnoreCase(method) && path.equals(base)) {
+            if (path.endsWith("/") && path.length()>1) path = path.substring(0, path.length()-1);
+            // path may end with /api/videojuegos or /api/videojuegos/{id}
+            String suffix = "/api/videojuegos";
+            if ("GET".equalsIgnoreCase(method) && path.endsWith(suffix)) {
                 List<Videojuego> list = dao.listAll();
                 write(exchange, 200, gson.toJson(list));
                 return;
             }
 
-            if ("POST".equalsIgnoreCase(method) && path.equals(base)) {
+            if ("POST".equalsIgnoreCase(method) && path.endsWith(suffix)) {
                 Videojuego body = gson.fromJson(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8), Videojuego.class);
                 Integer id = dao.create(body);
                 write(exchange, 200, gson.toJson(java.util.Collections.singletonMap("id", id)));
                 return;
             }
-
-            if (("PUT".equalsIgnoreCase(method) || "PATCH".equalsIgnoreCase(method)) && path.startsWith(base + "/")) {
-                String idStr = path.substring((base + "/").length()).split("/")[0];
+            if (("PUT".equalsIgnoreCase(method) || "PATCH".equalsIgnoreCase(method)) && path.contains(suffix + "/")) {
+                String idStr = path.substring(path.lastIndexOf('/') + 1).split("/")[0];
                 Integer id = Integer.parseInt(idStr);
                 if ("PUT".equalsIgnoreCase(method)) {
                     Videojuego body = gson.fromJson(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8), Videojuego.class);

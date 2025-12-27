@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tienda Videojuegos</title>
+</head>
+<body>
+  <h1>Tienda Videojuegos - Backend</h1>
+  <p>Este WAR puede servir el frontend compilado en <code>/browser</code>.</p>
+  <h2>Endpoints disponibles — Interfaz de prueba</h2>
+  <p>La interfaz siguiente intenta llamar los endpoints relativos al contexto donde se sirve esta página.
+  Si su WAR se sirve en <code>/backend</code> la URL base será <code>http://localhost:8080/backend</code>.</p>
+
+  <div style="display:flex;gap:20px;align-items:flex-start;">
+    <div style="flex:1;min-width:360px">
+      <label><strong>Context (detectado)</strong>: <span id="ctxSpan"></span></label>
+      <div style="margin-top:8px">
+        <label>Token (opcional): <input id="tokenInput" style="width:100%" placeholder="pegar token JWT aquí"></label>
+      </div>
+
+      <div style="margin-top:12px">
+        <label>Seleccionar endpoint:</label>
+        <select id="endpointSelect" style="width:100%;height:34px"></select>
+      </div>
+
+      <div style="margin-top:8px">
+        <label>ID (si aplica): <input id="idInput" style="width:100%" placeholder="usar para {id} o {usuarioId}"></label>
+      </div>
+
+      <div style="margin-top:8px">
+        <label>Cuerpo JSON (POST/PUT):</label>
+        <textarea id="bodyInput" style="width:100%;height:120px" placeholder='{"email":"user@example.com","password":"123"}'></textarea>
+      </div>
+
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button id="callBtn">Llamar endpoint</button>
+        <button id="fillExampleBtn">Auto-fill ejemplo</button>
+        <a id="openapiLink" style="margin-left:auto;align-self:center">OpenAPI</a>
+      </div>
+    </div>
+
+    <div style="flex:1;min-width:360px">
+      <label><strong>Resultado</strong>:</label>
+      <div style="margin-top:8px"><strong>Estado:</strong> <span id="statusSpan">-</span></div>
+      <pre id="resultPre" style="background:#f6f6f6;border:1px solid #ddd;padding:8px;height:420px;overflow:auto"></pre>
+    </div>
+  </div>
+
+  <script>
+    const endpoints = [
+      {name:'Login', method:'POST', path:'/api/auth/login', example:{email:'admin@example.com',password:'123'}},
+      {name:'Logout', method:'POST', path:'/api/auth/logout'},
+      {name:'Refresh', method:'POST', path:'/api/auth/refresh'},
+      {name:'List videojuegos', method:'GET', path:'/api/videojuegos'},
+      {name:'Get videojuego by id', method:'GET', path:'/api/videojuegos/{id}'},
+      {name:'Create videojuego', method:'POST', path:'/api/videojuegos', example:{titulo:'Mi Juego',precio:9.99,categoriaId:1}},
+      {name:'Update videojuego', method:'PUT', path:'/api/videojuegos/{id}', example:{titulo:'Mi Juego mod'}},
+      {name:'Delete videojuego', method:'DELETE', path:'/api/videojuegos/{id}'},
+      {name:'List usuarios', method:'GET', path:'/api/usuarios'},
+      {name:'Create usuario', method:'POST', path:'/api/usuarios', example:{email:'user@example.com',password:'123',rol:'USUARIO'}},
+      {name:'List empresas', method:'GET', path:'/api/empresas'},
+      {name:'Create empresa', method:'POST', path:'/api/empresas', example:{nombre:'Mi Empresa',email:'empresa@example.com'}},
+      {name:'Update empresa', method:'PUT', path:'/api/empresas/{id}', example:{nombre:'Nombre nuevo'}},
+      {name:'Delete empresa', method:'DELETE', path:'/api/empresas/{id}'},
+      {name:'Create compra', method:'POST', path:'/api/compras', example:{videojuegoId:1,usuarioId:1}},
+      {name:'Get comisiones', method:'GET', path:'/api/comisiones'},
+      {name:'Update comisiones', method:'PUT', path:'/api/comisiones', example:{porcentaje:10}},
+      {name:'List comentarios', method:'GET', path:'/api/comentarios'},
+      {name:'Create comentario', method:'POST', path:'/api/comentarios', example:{videojuegoId:1,usuarioId:1, texto:'Gran juego!'}},
+      {name:'List categorias', method:'GET', path:'/api/categorias'},
+      {name:'Create categoria', method:'POST', path:'/api/categorias', example:{nombre:'Acción'}},
+      {name:'List banners', method:'GET', path:'/api/banner'},
+      {name:'Create banner', method:'POST', path:'/api/banner', example:{titulo:'Promo',url:'/assets/promo.png'}},
+      {name:'Get reportes', method:'GET', path:'/api/reportes'},
+      {name:'Get reportes PDF', method:'GET', path:'/api/reportes?format=pdf'},
+      {name:'Get cartera', method:'GET', path:'/api/cartera/{usuarioId}'},
+      {name:'Recargar cartera', method:'POST', path:'/api/cartera', example:{usuarioId:1,monto:50}}
+    ];
+
+    const ctx = (function(){
+      const parts = location.pathname.split('/').filter(Boolean);
+      return parts[0] || '';
+    })();
+
+    document.getElementById('ctxSpan').textContent = ctx || '(root)';
+    const sel = document.getElementById('endpointSelect');
+    endpoints.forEach((e,i)=>{
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.text = `[${e.method}] ${e.name} — ${e.path}`;
+      sel.appendChild(opt);
+    });
+
+    document.getElementById('openapiLink').href = '/' + ctx + '/openapi.yaml';
+    document.getElementById('openapiLink').textContent = 'OpenAPI';
+
+    function buildUrl(pathTemplate, idVal){
+      let path = pathTemplate.replace('{id}', encodeURIComponent(idVal||'')).replace('{usuarioId}', encodeURIComponent(idVal||''));
+      // ensure we don't end with //
+      return '/' + ctx + path;
+    }
+
+    document.getElementById('fillExampleBtn').addEventListener('click', ()=>{
+      const ep = endpoints[sel.value];
+      if(ep && ep.example) document.getElementById('bodyInput').value = JSON.stringify(ep.example, null, 2);
+      else document.getElementById('bodyInput').value = '';
+    });
+
+    document.getElementById('callBtn').addEventListener('click', async ()=>{
+      const ep = endpoints[sel.value];
+      const idVal = document.getElementById('idInput').value.trim();
+      const token = document.getElementById('tokenInput').value.trim();
+      let url = buildUrl(ep.path, idVal);
+      const opts = { method: ep.method, headers: {} };
+      if(ep.method === 'POST' || ep.method === 'PUT'){
+        const txt = document.getElementById('bodyInput').value.trim();
+        if(txt){
+          try{ opts.body = JSON.stringify(JSON.parse(txt)); opts.headers['Content-Type']='application/json'; }
+          catch(e){ alert('JSON inválido en el cuerpo: '+e.message); return; }
+        }
+      }
+      if(token){ opts.headers['Authorization'] = 'Bearer ' + token; }
+
+      const statusSpan = document.getElementById('statusSpan');
+      const pre = document.getElementById('resultPre');
+      statusSpan.textContent = '...' ; pre.textContent = 'Pinging ' + url + ' ...';
+      try{
+        const res = await fetch(url, opts);
+        statusSpan.textContent = res.status + ' ' + res.statusText;
+        const ct = res.headers.get('content-type') || '';
+        if(ct.includes('application/json')){
+          const j = await res.json(); pre.textContent = JSON.stringify(j,null,2);
+        } else if(ct.includes('application/pdf')){
+          pre.textContent = 'PDF received — abrir en nueva pestaña';
+          const blob = await res.blob();
+          const u = URL.createObjectURL(blob); window.open(u,'_blank');
+        } else {
+          const txt = await res.text(); pre.textContent = txt;
+        }
+      }catch(err){
+        statusSpan.textContent = 'ERROR';
+        pre.textContent = 'Error al llamar endpoint:\n' + err.toString();
+      }
+    });
+  </script>
+
+</body>
+</html>

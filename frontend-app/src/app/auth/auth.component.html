@@ -1,34 +1,70 @@
-<div class="auth card">
-  <div *ngIf="user; else loggedout">
-    <p><strong>{{user.nickname || user.email}}</strong> — <em>{{user.role}}</em></p>
-    <button (click)="logout()">Cerrar sesión</button>
-  </div>
-  <ng-template #loggedout>
-    <h3>Login</h3>
-    <form (ngSubmit)="submitLogin()" [formGroup]="loginForm">
-      <label>Email <input formControlName="email"></label>
-      <label>Contraseña <input type="password" formControlName="password"></label>
-      <button type="submit">Entrar</button>
-    </form>
-    <h3>Registro</h3>
-    <div class="reg-buttons">
-      <button (click)="regForm.patchValue({role:'USUARIO'}); registerGamer()">Registrar Gamer</button>
-      <button (click)="regForm.patchValue({role:'EMPRESA'}); registerEmpresa()">Registrar Empresa</button>
+<div class="auth-page">
+  <div class="card">
+    <button class="back" aria-label="back">←</button>
+    <div *ngIf="user; else authForm">
+      <p class="logged-in"><strong>{{user.nickname || user.email}}</strong> — <em>{{user.role}}</em></p>
+      <button (click)="logout()" class="ghost">Cerrar sesión</button>
     </div>
-    <div class="reg-forms">
-      <label>Email <input [(ngModel)]="regForm.value.email" [ngModelOptions]="{standalone:true}"></label>
-      <label>Contraseña <input type="password" [(ngModel)]="regForm.value.password" [ngModelOptions]="{standalone:true}"></label>
-      <label *ngIf="regForm.value.role==='USUARIO'">Nickname <input [(ngModel)]="regForm.value.nickname" [ngModelOptions]="{standalone:true}"></label>
-      <label *ngIf="regForm.value.role==='EMPRESA'">Nombre Empresa <input [(ngModel)]="regForm.value.name" [ngModelOptions]="{standalone:true}"></label>
-    </div>
-  </ng-template>
-  <p class="muted">{{message}}</p>
+    <ng-template #authForm>
+      <div class="card-inner">
+        <h2 class="title">Login</h2>
 
-  <div *ngIf="user && user.role==='ADMIN'" class="admin-panel">
-    <h4>Panel Admin</h4>
-    <button (click)="loadUsers()">Listar usuarios</button>
-    <ul>
-      <li *ngFor="let u of users">{{u.email}} — {{u.role}}</li>
-    </ul>
+        <form [formGroup]="loginForm" (ngSubmit)="submitLogin()" class="login-form">
+          <div class="input-group">
+            <span class="icon">📧</span>
+            <input formControlName="email" type="email" placeholder="Username or Email" autocomplete="username">
+          </div>
+
+          <div class="input-group">
+            <span class="icon">🔒</span>
+            <input formControlName="password" type="password" placeholder="Password" autocomplete="current-password">
+          </div>
+
+          <button type="submit" class="btn-primary">LOGIN</button>
+        </form>
+
+        <div class="small-links">
+          <a class="muted-link">Forgot Password?</a>
+        </div>
+
+        <div class="signup-row">
+          <span>Don't have an account?</span>
+          <a class="link" (click)="showRegister = true">Sign Up</a>
+        </div>
+
+        <div class="or-sep"><span>OR</span></div>
+
+        <div class="socials">
+          <button class="social fb">f</button>
+          <button class="social g">g+</button>
+          <button class="social tw">t</button>
+        </div>
+
+        <div *ngIf="showRegister" class="register-panel">
+          <h3 class="reg-title">Create account</h3>
+          <form [formGroup]="regForm" (ngSubmit)="submitRegister()" class="reg-form">
+            <div class="input-group small">
+              <input formControlName="email" type="email" placeholder="Email">
+            </div>
+            <div class="input-group small">
+              <input formControlName="password" type="password" placeholder="Password">
+            </div>
+            <div *ngIf="regForm.get('role')?.value==='USUARIO'" class="input-group small">
+              <input formControlName="nickname" placeholder="Nickname">
+            </div>
+            <div *ngIf="regForm.get('role')?.value==='EMPRESA'" class="input-group small">
+              <input formControlName="name" placeholder="Company name">
+            </div>
+            <div class="reg-actions">
+              <button type="button" class="ghost" (click)="regForm.patchValue({role:'USUARIO'}); registerGamer()">Register Gamer</button>
+              <button type="button" class="ghost" (click)="regForm.patchValue({role:'EMPRESA'}); registerEmpresa()">Register Company</button>
+            </div>
+            <div class="reg-close"><a (click)="showRegister = false">Close</a></div>
+          </form>
+        </div>
+
+        <p class="muted">{{message}}</p>
+      </div>
+    </ng-template>
   </div>
 </div>

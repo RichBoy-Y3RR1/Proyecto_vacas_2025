@@ -1,0 +1,142 @@
+openapi: 3.0.3
+info:
+  title: Tienda Videojuegos Backend API
+  version: 1.0.0
+  description: API mínima para la Tienda de Videojuegos (generada automáticamente)
+servers:
+  - url: /  # context root; use http://localhost:8080/{context}
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Videojuego:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        precio:
+          type: number
+          format: float
+        estado:
+          type: string
+        empresaId:
+          type: integer
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        role:
+          type: string
+paths:
+  /api/auth/login:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: OK
+  /api/auth/logout:
+    post:
+      summary: Logout (revoke token)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /api/videojuegos:
+    get:
+      summary: List videojuegos
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create videojuego
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Videojuego'
+  /api/videojuegos/{id}:
+    get:
+      summary: Get videojuego
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+    put:
+      summary: Update videojuego
+      security:
+        - BearerAuth: []
+    delete:
+      summary: Delete videojuego
+      security:
+        - BearerAuth: []
+  /api/usuarios:
+    get:
+      summary: List usuarios
+  /api/empresas:
+    get:
+      summary: List empresas
+    post:
+      summary: Create empresa (admin only)
+      security:
+        - BearerAuth: []
+  /api/compras:
+    post:
+      summary: Create purchase
+      security:
+        - BearerAuth: []
+  /api/comentarios:
+    get:
+      summary: List comentarios
+    post:
+      summary: Create comentario (requires purchase)
+      security:
+        - BearerAuth: []
+  /api/cartera:
+    get:
+      summary: Get wallet by usuario_id
+      security:
+        - BearerAuth: []
+    post:
+      summary: Top-up wallet
+      security:
+        - BearerAuth: []
+  /api/comisiones:
+    get:
+      summary: Get commissions
+    put:
+      summary: Update commissions (admin only)
+      security:
+        - BearerAuth: []
+  /api/reportes:
+    get:
+      summary: Get reports (admin)
+      security:
+        - BearerAuth: []
+security:
+  - BearerAuth: []

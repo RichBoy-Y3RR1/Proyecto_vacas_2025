@@ -1,48 +1,64 @@
 package com.example.backend.db;
 
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.annotation.WebListener;
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Scanner;
 
-public class DbInitializer {
-    public static void main(String[] args) throws Exception {
-        String url = System.getenv("DB_URL");
-        String user = System.getenv("DB_USER");
-        String pass = System.getenv("DB_PASS");
+@WebListener
+public class DbInitializer implements ServletContextListener {
 
-        if (url == null || url.isBlank()) {
-            url = "jdbc:mysql://127.0.0.1:3306?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&allowMultiQueries=true";
-        } else if (!url.contains("allowMultiQueries=")) {
-            if (url.contains("?")) url += "&allowMultiQueries=true"; else url += "?allowMultiQueries=true";
-        }
-        if (user == null) user = "root";
-        if (pass == null) pass = "";
+    @Override
+    public void contextInitialized(ServletContextEvent sce) {
+        System.out.println("DbInitializer: initializing DB schema if necessary...");
+        initEmbedded();
+    }
 
-        System.out.println("Connecting to MySQL: " + url + " user=" + user);
+    @Override
+    public void contextDestroyed(ServletContextEvent sce) {
+        // nothing
+    }
 
-        String sql;
-        try (InputStream is = DbInitializer.class.getResourceAsStream("/init_mysql.sql")) {
-            if (is == null) throw new IllegalStateException("init_mysql.sql not found in resources");
-            try (Scanner s = new Scanner(is, StandardCharsets.UTF_8)) {
-                s.useDelimiter("\\A");
-                sql = s.hasNext() ? s.next() : "";
+    // add helper to initialize DB when running the embedded HTTP server
+    public static void initEmbedded() {
+        System.out.println("DbInitializer.initEmbedded: running schema.sql...");
+        try (Connection conn = DBConnection.getConnection()) {
+            InputStream is = DbInitializer.class.getClassLoader().getResourceAsStream("db/schema.sql");
+            if (is == null) {
+                System.out.println("DbInitializer.initEmbedded: schema.sql not found in classpath");
+                return;
             }
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = r.readLine()) != null) {
+                    sb.append(line).append("\n");
+                }
+            }
+            String[] stmts = sb.toString().split(";\\s*\\n");
+            try (Statement st = conn.createStatement()) {
+                for (String s : stmts) {
+                    String sql = s.trim();
+                    if (sql.isEmpty()) continue;
+                    try { st.execute(sql); } catch (Exception e) { System.out.println("DbInitializer.initEmbedded: stmt failed: " + e.getMessage()); }
+                }
+            }
+            // report count of users
+            try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery("SELECT COUNT(*) AS c FROM Usuario")){
+                if (rs.next()){
+                    int c = rs.getInt("c");
+                    System.out.println("DbInitializer.initEmbedded: Usuario rows="+c);
+                }
+            } catch(Exception ex){ /* ignore */ }
+        } catch (Exception e) {
+            System.out.println("DbInitializer.initEmbedded: could not initialize DB: " + e.getMessage());
         }
-
-        // Normalize whitespace and ensure the script ends with semicolon
-        sql = sql.replaceAll("\r\n", "\n");
-
-        try (Connection conn = DriverManager.getConnection(url, user, pass);
-             Statement st = conn.createStatement()) {
-            conn.setAutoCommit(true);
-            System.out.println("Executing SQL script (may take a few seconds)...");
-            boolean ok = st.execute(sql);
-            System.out.println("Script executed. Statement result flag: " + ok);
-        }
-
-        System.out.println("DB init complete.");
     }
 }

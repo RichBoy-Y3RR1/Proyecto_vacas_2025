@@ -32,6 +32,17 @@ public class ComentarioServlet extends BaseServlet {
         try (Connection conn = DBConnection.getConnection()){
             var body = gson.fromJson(req.getReader(), java.util.Map.class);
             Integer usuarioId = ((Number)body.get("usuario_id")).intValue(); Integer videojuegoId = ((Number)body.get("videojuego_id")).intValue();
+            // Verify that the user purchased the game before allowing a comment (business rule)
+            var check = conn.prepareStatement("SELECT 1 FROM Compra WHERE usuario_id = ? AND videojuego_id = ? LIMIT 1");
+            check.setInt(1, usuarioId); check.setInt(2, videojuegoId);
+            var rcheck = check.executeQuery();
+            if (!rcheck.next()) { resp.setStatus(403); writeError(resp, 403, "purchase_required", "User must have purchased the game to comment"); return; }
+            // ensure token user matches usuarioId (or admin)
+            Integer tokenUser = (Integer) req.getAttribute("userId");
+            String tokenRole = (String) req.getAttribute("role");
+            if (tokenUser == null) { writeError(resp, 401, "login_required", "Authentication required"); return; }
+            if (!tokenUser.equals(usuarioId) && (tokenRole == null || !tokenRole.equalsIgnoreCase("ADMIN"))){ writeError(resp, 403, "forbidden", "Not allowed to create comment for this user"); return; }
+
             String texto = (String) body.getOrDefault("texto", null); Integer puntuacion = ((Number)body.getOrDefault("puntuacion", 0)).intValue();
             var ps = conn.prepareStatement("INSERT INTO Comentario (usuario_id, videojuego_id, texto, puntuacion) VALUES (?,?,?,?)", java.sql.PreparedStatement.RETURN_GENERATED_KEYS);
             ps.setInt(1, usuarioId); ps.setInt(2, videojuegoId); ps.setString(3, texto); ps.setInt(4, puntuacion);

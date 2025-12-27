@@ -14,35 +14,49 @@ public class DBConnection {
         private static final String PASS = System.getenv().getOrDefault("DB_PASS","tu_password");
 
     public static Connection getConnection() throws SQLException {
+        // Try configured DB (MySQL) first. If it fails or env is not set, fallback to an embedded H2 DB
         try {
-            return DriverManager.getConnection(URL, USER, PASS);
-        } catch (SQLException e) {
-            System.err.println("MySQL connection failed: " + e.getMessage());
-            System.err.println("Falling back to in-memory H2 database for development.");
-            String h2Url = "jdbc:h2:mem:tienda;DB_CLOSE_DELAY=-1;MODE=MySQL;DB_CLOSE_ON_EXIT=FALSE";
-            Connection h2 = null;
-            SQLException lastEx = null;
-            // Try using the same USER/PASS environment values first (useful when tests set DB_USER/DB_PASS)
+            Connection conn = DriverManager.getConnection(URL, USER, PASS);
+            try { ensureSeedUsers(conn); } catch(Exception ex){ System.err.println("Failed to ensure seed users: " + ex.getMessage()); }
+            return conn;
+        } catch (Exception e) {
+            System.err.println("MySQL connection failed, falling back to embedded H2: " + e.getMessage());
             try {
-                System.err.println("H2 attempt: url=" + h2Url + " user=" + USER + " (env)");
-                h2 = DriverManager.getConnection(h2Url, USER, PASS);
-            } catch (SQLException ex) {
-                lastEx = ex;
-                System.err.println("H2 attempt failed with env creds: " + ex.getMessage());
-                // try lowercase common H2 default user
-                try {
-                    System.err.println("H2 attempt: url=" + h2Url + " user=sa (default)");
-                    h2 = DriverManager.getConnection(h2Url, "sa", "");
-                } catch (SQLException ex2) {
-                    lastEx = ex2;
-                    System.err.println("H2 attempt failed with default sa: " + ex2.getMessage());
-                    // final fallback: shorter URL without extra params
-                    System.err.println("H2 attempt: url=jdbc:h2:mem:tienda;DB_CLOSE_DELAY=-1 user=sa");
-                    h2 = DriverManager.getConnection("jdbc:h2:mem:tienda;DB_CLOSE_DELAY=-1", "sa", "");
-                }
+                // H2 in file mode inside project folder so data persists between runs
+                String h2Url = System.getenv().getOrDefault("H2_URL", "jdbc:h2:./data/tienda;MODE=MySQL;AUTO_SERVER=TRUE;LOCK_MODE=3");
+                String h2User = System.getenv().getOrDefault("H2_USER", "sa");
+                String h2Pass = System.getenv().getOrDefault("H2_PASS", "");
+                Connection h2 = DriverManager.getConnection(h2Url, h2User, h2Pass);
+                ensureH2Schema(h2);
+                try { ensureSeedUsers(h2); } catch(Exception ex){ System.err.println("Failed to ensure seed users on H2: " + ex.getMessage()); }
+                return h2;
+            } catch (Exception ex2) {
+                throw new SQLException("Unable to obtain database connection (MySQL and H2 failed): " + ex2.getMessage(), ex2);
             }
-            ensureH2Schema(h2);
-            return h2;
+        }
+    }
+
+    private static void ensureSeedUsers(Connection conn) {
+        try (Statement st = conn.createStatement()){
+            // check if Usuario table exists by trying a simple count
+            try (ResultSet rs = st.executeQuery("SELECT 1 FROM Usuario LIMIT 1")){
+                // table exists; continue
+            } catch (Exception ex){
+                // table missing; nothing to seed here (schema not present)
+                return;
+            }
+            // Insert default users if they do not exist
+            String[] emails = {"admin@tienda.com","empresa@acme.com","user@cliente.com"};
+            String[] inserts = new String[]{
+                "INSERT INTO Usuario (correo, password, role, estado, nickname, fecha_nacimiento) SELECT 'admin@tienda.com','admin123','ADMIN','ACTIVA','admin','1990-01-01' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@tienda.com')",
+                "INSERT INTO Usuario (correo, password, role, estado, nickname, fecha_nacimiento) SELECT 'empresa@acme.com','empresa123','EMPRESA','ACTIVA','acme_user','1985-05-05' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='empresa@acme.com')",
+                "INSERT INTO Usuario (correo, password, role, estado, nickname, fecha_nacimiento) SELECT 'user@cliente.com','user123','USUARIO','ACTIVA','gamer123','2000-06-01' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='user@cliente.com')"
+            };
+            for (String sql : inserts){
+                try { st.execute(sql); } catch(Exception ex){ /* ignore individual insert failures */ }
+            }
+        } catch (Exception ex){
+            System.err.println("ensureSeedUsers failed: " + ex.getMessage());
         }
     }
 
@@ -70,6 +84,7 @@ public class DBConnection {
             st.execute("CREATE TABLE Compra (id INT AUTO_INCREMENT PRIMARY KEY, usuario_id INT NOT NULL, videojuego_id INT NOT NULL, fecha DATETIME DEFAULT CURRENT_TIMESTAMP, total DECIMAL(10,2), platform_commission DECIMAL(12,4), company_amount DECIMAL(12,4), FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE, FOREIGN KEY (videojuego_id) REFERENCES Videojuego(id) ON DELETE CASCADE)");
             st.execute("CREATE TABLE Comentario (id INT AUTO_INCREMENT PRIMARY KEY, usuario_id INT NOT NULL, videojuego_id INT NOT NULL, texto TEXT, puntuacion INT, fecha DATETIME DEFAULT CURRENT_TIMESTAMP, visible BOOLEAN DEFAULT TRUE, FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE, FOREIGN KEY (videojuego_id) REFERENCES Videojuego(id) ON DELETE CASCADE)");
             st.execute("CREATE TABLE Cartera (id INT AUTO_INCREMENT PRIMARY KEY, usuario_id INT NOT NULL, saldo DECIMAL(12,2) DEFAULT 0, FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE)");
+            st.execute("CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP)");
             st.execute("CREATE TABLE Grupo_Familiar (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(150), owner_id INT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (owner_id) REFERENCES Usuario(id) ON DELETE CASCADE)");
             st.execute("CREATE TABLE Grupo_Usuario (grupo_id INT NOT NULL, usuario_id INT NOT NULL, PRIMARY KEY (grupo_id, usuario_id), FOREIGN KEY (grupo_id) REFERENCES Grupo_Familiar(id) ON DELETE CASCADE, FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE)");
             st.execute("CREATE TABLE Comision_Global (id INT PRIMARY KEY, percent DECIMAL(5,2) NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");

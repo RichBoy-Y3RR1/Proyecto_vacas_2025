@@ -21,10 +21,11 @@ public class CompraHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange ex) {
         try {
-            ex.getResponseHeaders().add("Content-Type", "application/json;charset=UTF-8");
-            ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            ex.getResponseHeaders().set("Content-Type", "application/json;charset=UTF-8");
+            ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             String method = ex.getRequestMethod();
             String path = ex.getRequestURI().getPath();
+            if (path.endsWith("/") && path.length()>1) path = path.substring(0, path.length()-1);
             String base = "/backend/api/compras";
             if ("POST".equalsIgnoreCase(method) && path.equals(base)){
                 var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);

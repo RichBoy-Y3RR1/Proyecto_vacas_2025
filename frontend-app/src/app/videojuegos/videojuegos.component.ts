@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { VideojuegoService } from './videojuego.service';
 
 @Component({
@@ -6,7 +6,7 @@ import { VideojuegoService } from './videojuego.service';
   templateUrl: './videojuegos.component.html',
   styleUrls: ['./videojuegos.component.css']
 })
-export class VideojuegosComponent implements OnInit {
+export class VideojuegosComponent implements OnInit, OnDestroy {
   videojuegos: any[] = [];
   loading = false;
   error: string | null = null;
@@ -20,7 +20,11 @@ export class VideojuegosComponent implements OnInit {
 
   constructor(private svc: VideojuegoService) {}
 
-  ngOnInit(): void { this.load(); }
+  ngOnInit(): void { this.load(); window.addEventListener('auth-changed', this.authListener); }
+
+  ngOnDestroy(): void { window.removeEventListener('auth-changed', this.authListener); }
+
+  private authListener = () => { this.load(); };
 
   private loadAuth(){
     try{

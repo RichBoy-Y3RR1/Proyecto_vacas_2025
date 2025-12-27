@@ -1,0 +1,538 @@
+2025-12-26 20:45:59.736197-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMAIL" no encontrada
+Column "EMAIL" not found; SQL statement:
+INSERT INTO Usuario (email,password,role,empresa_id)
+SELECT 'admin@example.com','pass','ADMIN', (SELECT id FROM Empresa WHERE nombre='Empresa Demo')
+WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE email='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 20:45:59.740187-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "TITULO" no encontrada
+Column "TITULO" not found; SQL statement:
+-- Sample videojuego
+INSERT INTO Videojuego (titulo, descripcion, precio, empresa_id)
+SELECT 'Demo Game','Demo description',9.99,(SELECT id FROM Empresa WHERE nombre='Empresa Demo')
+WHERE NOT EXISTS (SELECT 1 FROM Videojuego WHERE titulo='Demo Game') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 20:45:59.743179-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "U.EMAIL" no encontrada
+Column "U.EMAIL" not found; SQL statement:
+INSERT INTO Cartera (usuario_id, saldo)
+SELECT u.id, 100.00 FROM Usuario u WHERE u.email='admin@example.com' AND NOT EXISTS (SELECT 1 FROM Cartera c WHERE c.usuario_id = u.id) [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.expression.ExpressionColumn.getColumnException(ExpressionColumn.java:244)
+	at org.h2.expression.ExpressionColumn.optimizeOther(ExpressionColumn.java:226)
+	at org.h2.expression.ExpressionColumn.optimize(ExpressionColumn.java:213)
+	at org.h2.expression.condition.Comparison.optimize(Comparison.java:147)
+	at org.h2.expression.condition.ConditionAndOr.optimize(ConditionAndOr.java:136)
+	at org.h2.expression.Expression.optimizeCondition(Expression.java:148)
+	at org.h2.command.query.Select.prepareExpressions(Select.java:1177)
+	at org.h2.command.query.Query.prepare(Query.java:218)
+	at org.h2.command.dml.Insert.doPrepare(Insert.java:310)
+	at org.h2.command.dml.DataChangeStatement.prepare(DataChangeStatement.java:37)
+	at org.h2.command.Parser.prepareCommand(Parser.java:489)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 20:46:27.371761-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 20:46:27.385725-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "ID_CARTERA" no encontrada
+Column "ID_CARTERA" not found; SQL statement:
+SELECT id_cartera, usuario_id, saldo FROM Cartera [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.expression.ExpressionColumn.getColumnException(ExpressionColumn.java:244)
+	at org.h2.expression.ExpressionColumn.optimizeOther(ExpressionColumn.java:226)
+	at org.h2.expression.ExpressionColumn.optimize(ExpressionColumn.java:213)
+	at org.h2.command.query.Select.optimizeExpressionsAndPreserveAliases(Select.java:1285)
+	at org.h2.command.query.Select.prepareExpressions(Select.java:1167)
+	at org.h2.command.query.Query.prepare(Query.java:218)
+	at org.h2.command.Parser.prepareCommand(Parser.java:489)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeQuery(JdbcStatement.java:94)
+	at com.example.backend.http.CarteraHandler.handle(CarteraHandler.java:26)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.AuthFilter.doFilter(AuthFilter.java:76)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:101)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange$LinkHandler.handle(ServerImpl.java:863)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange.run(ServerImpl.java:839)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1095)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:619)
+	at java.base/java.lang.Thread.run(Thread.java:1447)
+2025-12-26 20:46:32.563889-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 20:47:15.568988-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 20:47:38.653651-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 20:47:38.662628-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "ID_CARTERA" no encontrada
+Column "ID_CARTERA" not found; SQL statement:
+SELECT id_cartera, usuario_id, saldo FROM Cartera [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.expression.ExpressionColumn.getColumnException(ExpressionColumn.java:244)
+	at org.h2.expression.ExpressionColumn.optimizeOther(ExpressionColumn.java:226)
+	at org.h2.expression.ExpressionColumn.optimize(ExpressionColumn.java:213)
+	at org.h2.command.query.Select.optimizeExpressionsAndPreserveAliases(Select.java:1285)
+	at org.h2.command.query.Select.prepareExpressions(Select.java:1167)
+	at org.h2.command.query.Query.prepare(Query.java:218)
+	at org.h2.command.Parser.prepareCommand(Parser.java:489)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeQuery(JdbcStatement.java:94)
+	at com.example.backend.http.CarteraHandler.handle(CarteraHandler.java:26)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.AuthFilter.doFilter(AuthFilter.java:76)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:101)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange$LinkHandler.handle(ServerImpl.java:863)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange.run(ServerImpl.java:839)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1095)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:619)
+	at java.base/java.lang.Thread.run(Thread.java:1447)
+2025-12-26 20:48:14.680661-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 20:48:14.702574-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMAIL" no encontrada
+Column "EMAIL" not found; SQL statement:
+INSERT INTO Usuario (email,password,role,empresa_id)
+SELECT 'admin@example.com','pass','ADMIN', (SELECT id FROM Empresa WHERE nombre='Empresa Demo')
+WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE email='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 20:48:14.704598-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "TITULO" no encontrada
+Column "TITULO" not found; SQL statement:
+-- Sample videojuego
+INSERT INTO Videojuego (titulo, descripcion, precio, empresa_id)
+SELECT 'Demo Game','Demo description',9.99,(SELECT id FROM Empresa WHERE nombre='Empresa Demo')
+WHERE NOT EXISTS (SELECT 1 FROM Videojuego WHERE titulo='Demo Game') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 20:48:14.707561-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "U.EMAIL" no encontrada
+Column "U.EMAIL" not found; SQL statement:
+INSERT INTO Cartera (usuario_id, saldo)
+SELECT u.id, 100.00 FROM Usuario u WHERE u.email='admin@example.com' AND NOT EXISTS (SELECT 1 FROM Cartera c WHERE c.usuario_id = u.id) [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.expression.ExpressionColumn.getColumnException(ExpressionColumn.java:244)
+	at org.h2.expression.ExpressionColumn.optimizeOther(ExpressionColumn.java:226)
+	at org.h2.expression.ExpressionColumn.optimize(ExpressionColumn.java:213)
+	at org.h2.expression.condition.Comparison.optimize(Comparison.java:147)
+	at org.h2.expression.condition.ConditionAndOr.optimize(ConditionAndOr.java:136)
+	at org.h2.expression.Expression.optimizeCondition(Expression.java:148)
+	at org.h2.command.query.Select.prepareExpressions(Select.java:1177)
+	at org.h2.command.query.Query.prepare(Query.java:218)
+	at org.h2.command.dml.Insert.doPrepare(Insert.java:310)
+	at org.h2.command.dml.DataChangeStatement.prepare(DataChangeStatement.java:37)
+	at org.h2.command.Parser.prepareCommand(Parser.java:489)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 20:52:19.412926-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 20:52:19.437859-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMPRESA_ID" no encontrada
+Column "EMPRESA_ID" not found; SQL statement:
+INSERT INTO Usuario (correo,password,role,empresa_id,nickname)
+SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 20:57:17.565389-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 20:57:17.590322-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMPRESA_ID" no encontrada
+Column "EMPRESA_ID" not found; SQL statement:
+INSERT INTO Usuario (correo,password,role,empresa_id,nickname)
+SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 21:00:40.763506-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:00:40.783452-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMPRESA_ID" no encontrada
+Column "EMPRESA_ID" not found; SQL statement:
+INSERT INTO Usuario (correo,password,role,empresa_id,nickname)
+SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 21:08:57.711399-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:08:57.739324-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMPRESA_ID" no encontrada
+Column "EMPRESA_ID" not found; SQL statement:
+INSERT INTO Usuario (correo,password,role,empresa_id,nickname)
+SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 21:13:57.185721-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:13:57.224617-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMPRESA_ID" no encontrada
+Column "EMPRESA_ID" not found; SQL statement:
+INSERT INTO Usuario (correo,password,role,empresa_id,nickname)
+SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 21:21:09.643162-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:21:09.662112-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMPRESA_ID" no encontrada
+Column "EMPRESA_ID" not found; SQL statement:
+INSERT INTO Usuario (correo,password,role,empresa_id,nickname)
+SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 21:30:55.424964-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:30:55.448900-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMPRESA_ID" no encontrada
+Column "EMPRESA_ID" not found; SQL statement:
+INSERT INTO Usuario (correo,password,role,empresa_id,nickname)
+SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 21:34:17.650872-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:34:17.670818-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMPRESA_ID" no encontrada
+Column "EMPRESA_ID" not found; SQL statement:
+INSERT INTO Usuario (correo,password,role,empresa_id,nickname)
+SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:32)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 21:34:45.557311-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:34:45.609202-06:00 jdbc[4]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:35:22.695087-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:35:22.741962-06:00 jdbc[4]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:35:50.843880-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:36:23.796873-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:36:23.834734-06:00 jdbc[4]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:47:12.000072-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:47:12.024008-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Columna "EMPRESA_ID" no encontrada
+Column "EMPRESA_ID" not found; SQL statement:
+INSERT INTO Usuario (correo,password,role,empresa_id,nickname)
+SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com') [42122-222]
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:514)
+	at org.h2.message.DbException.getJdbcSQLException(DbException.java:489)
+	at org.h2.message.DbException.get(DbException.java:223)
+	at org.h2.message.DbException.get(DbException.java:199)
+	at org.h2.table.Table.getColumn(Table.java:759)
+	at org.h2.command.Parser.parseColumn(Parser.java:1190)
+	at org.h2.command.Parser.parseColumnList(Parser.java:1175)
+	at org.h2.command.Parser.parseInsert(Parser.java:1549)
+	at org.h2.command.Parser.parsePrepared(Parser.java:719)
+	at org.h2.command.Parser.parse(Parser.java:592)
+	at org.h2.command.Parser.parse(Parser.java:564)
+	at org.h2.command.Parser.prepareCommand(Parser.java:483)
+	at org.h2.engine.SessionLocal.prepareLocal(SessionLocal.java:639)
+	at org.h2.engine.SessionLocal.prepareCommand(SessionLocal.java:559)
+	at org.h2.jdbc.JdbcConnection.prepareCommand(JdbcConnection.java:1166)
+	at org.h2.jdbc.JdbcStatement.executeInternal(JdbcStatement.java:245)
+	at org.h2.jdbc.JdbcStatement.execute(JdbcStatement.java:231)
+	at com.example.backend.db.EmbeddedDbInitializer.init(EmbeddedDbInitializer.java:34)
+	at com.example.backend.LauncherMain.main(LauncherMain.java:46)
+2025-12-26 21:47:49.494893-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:47:49.540770-06:00 jdbc[4]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:48:22.122719-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:48:22.164606-06:00 jdbc[4]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:49:04.282078-06:00 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]
+2025-12-26 21:49:04.327954-06:00 jdbc[4]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Tabla "BANNER" ya existe
+Table "BANNER" already exists; SQL statement:
+CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP) [42101-222]

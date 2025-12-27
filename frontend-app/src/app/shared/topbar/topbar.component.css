@@ -1,0 +1,5 @@
+.topbar{display:flex;align-items:center;padding:8px;background:#222;color:#fff}
+.brand{font-weight:700}
+.spacer{flex:1}
+.topbar a{color:#fff;text-decoration:underline}
+.topbar button{margin-left:8px}

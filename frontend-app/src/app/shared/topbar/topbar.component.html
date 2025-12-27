@@ -1,0 +1,11 @@
+<div class="topbar">
+  <div class="brand">Tienda Videojuegos</div>
+  <div class="spacer"></div>
+  <div *ngIf="user">
+    Hola, {{ user.name || user.email }} ({{ user.role }})
+    <button (click)="logout()">Cerrar sesión</button>
+  </div>
+  <div *ngIf="!user">
+    <a routerLink="/">Login</a>
+  </div>
+</div>

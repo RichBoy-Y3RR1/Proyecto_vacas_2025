@@ -9,6 +9,7 @@ public class Videojuego {
     private BigDecimal precio;
     private String estado;
     private String empresa;
+    private Integer empresaId;
     private String edad_clasificacion;
 
     public Integer getId() { return id; }
@@ -23,6 +24,8 @@ public class Videojuego {
     public void setEstado(String estado) { this.estado = estado; }
     public String getEmpresa() { return empresa; }
     public void setEmpresa(String empresa) { this.empresa = empresa; }
+    public Integer getEmpresaId() { return empresaId; }
+    public void setEmpresaId(Integer empresaId) { this.empresaId = empresaId; }
     public String getEdad_clasificacion() { return edad_clasificacion; }
     public void setEdad_clasificacion(String edad_clasificacion) { this.edad_clasificacion = edad_clasificacion; }
 }
