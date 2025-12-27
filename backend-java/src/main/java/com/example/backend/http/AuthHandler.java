@@ -52,7 +52,11 @@ public class AuthHandler implements HttpHandler {
                 java.util.Map<String,Object> claims = new java.util.HashMap<>(); claims.put("userId", found.getId()); claims.put("role", found.getRole());
                 if (found instanceof com.example.backend.models.CompanyUser){ claims.put("companyId", ((com.example.backend.models.CompanyUser)found).getCompanyId()); }
                 String token = JwtUtil.createToken(claims);
-                java.util.Map<String,Object> out = new java.util.HashMap<>(); out.put("token", token); out.put("user", java.util.Map.of("id", found.getId(), "email", found.getEmail(), "role", found.getRole()));
+                java.util.Map<String,Object> out = new java.util.HashMap<>(); out.put("token", token);
+                java.util.Map<String,Object> userMap = new java.util.HashMap<>(); userMap.put("id", found.getId()); userMap.put("email", found.getEmail()); userMap.put("role", found.getRole());
+                // if company user, expose company id under multiple keys for frontend compatibility
+                if (found instanceof com.example.backend.models.CompanyUser){ Integer cid = ((com.example.backend.models.CompanyUser)found).getCompanyId(); if (cid != null){ userMap.put("companyId", cid); userMap.put("empresaId", cid); userMap.put("empresa_id", cid); } }
+                out.put("user", userMap);
                 write(ex,200,gson.toJson(out)); return;
             }
 

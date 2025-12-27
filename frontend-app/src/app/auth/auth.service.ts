@@ -28,7 +28,7 @@ export class AuthService {
 
   getCurrentUser(): AppUser | null { return this.currentUserSubject.value; }
   getToken(): string | null { return localStorage.getItem(this.tokenKey); }
-  isLoggedIn(): boolean { return !!this.getToken(); }
+  isLoggedIn(): boolean { return !!this.getToken() || !!this.currentUserSubject.value; }
 
   login(email: string, password: string): Observable<any>{
     // Try normal login; if it errors (backend down or 401), attempt a dev fallback by fetching users
@@ -39,7 +39,7 @@ export class AuthService {
       switchMap(r => {
         if (r && r.user) return of(r);
         // token-only response: try to find the user by email
-        return this.http.get<any[]>('http://localhost:8080/tienda-backend-1.0.0/api/usuarios').pipe(
+        return this.http.get<any[]>('/tienda-backend-1.0.0/api/usuarios').pipe(
           map(users => {
             const found = (users || []).find(u => u.email === email) || null;
             return Object.assign({}, r || {}, { user: found });
@@ -53,7 +53,7 @@ export class AuthService {
           return throwError(() => ({ status: 401, message: 'Contraseña o correo incorrecto o el usuario no existe' }));
         }
         // For other errors (backend down), try the fallback to user list so dev flow can continue
-        return this.http.get<any[]>('http://localhost:8080/tienda-backend-1.0.0/api/usuarios').pipe(
+        return this.http.get<any[]>('/tienda-backend-1.0.0/api/usuarios').pipe(
           map(users => {
             const found = (users || []).find(u => u.email === email) || null;
             return { token: found ? 'dev-token' : null, user: found };
@@ -62,21 +62,58 @@ export class AuthService {
       }),
       tap(r => {
         const token = r && r.token ? r.token : null;
-        const user = r && r.user ? r.user : null;
+        let user = r && r.user ? r.user : null;
+        // infer empresa membership from local cache when backend doesn't provide it
+        try{
+          const inferred = this.inferEmpresaFromLocal(user);
+          if(inferred) user = Object.assign({}, user, inferred);
+        }catch(e){}
         this.saveToken(token);
         this.saveUser(user);
       })
     );
   }
 
+  // If user email is listed in any local company users cache, return { role:'EMPRESA', empresa_id }
+  private inferEmpresaFromLocal(user: any): any | null{
+    try{
+      if(!user || !user.email) return null;
+      const email = String(user.email).toLowerCase();
+      const rawCompanies = localStorage.getItem('local_companies');
+      if(!rawCompanies) return null;
+      const companies = JSON.parse(rawCompanies) as any[];
+      for(const c of companies){
+        const cid = c.id;
+        try{
+          const rawUsers = localStorage.getItem(`local_users_${cid}`);
+          if(!rawUsers) continue;
+          const users = JSON.parse(rawUsers) as any[];
+          for(const u of users){
+            const ue = (u.email || u.correo || u.mail || u.username || u.correo_electronico || '').toString().toLowerCase();
+            if(ue === email) return { role: 'EMPRESA', empresa_id: cid };
+          }
+        }catch(e){ continue; }
+        // also treat company owner email as empresa member
+        const compEmail = (c.correo || c.email || '') + '';
+        if(compEmail && compEmail.toLowerCase() === email) return { role: 'EMPRESA', empresa_id: c.id };
+      }
+    }catch(e){/* ignore */}
+    return null;
+  }
+
   logout(){ this.saveToken(null); this.saveUser(null); }
 
   register(payload: any): Observable<any>{
-    return this.http.post(`${this.base}/register`, payload);
+    return this.http.post(`${this.base}/register`, payload).pipe(
+      catchError(err => {
+        const msg = err && err.error && err.error.message ? err.error.message : (err && err.message) || 'Error al registrar';
+        return throwError(() => ({ status: err && err.status, message: msg }));
+      })
+    );
   }
 
   listUsers(): Observable<any[]>{
-    return this.http.get<any[]>('http://localhost:8080/tienda-backend-1.0.0/api/usuarios');
+    return this.http.get<any[]>('/tienda-backend-1.0.0/api/usuarios');
   }
 
   authHeaders(): { headers: HttpHeaders } {

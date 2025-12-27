@@ -42,9 +42,13 @@ public class VideojuegoServlet extends BaseServlet {
             if (tokenUser == null) { resp.setStatus(401); writeJson(resp, java.util.Map.of("error","login_required")); return; }
             if (!("EMPRESA".equalsIgnoreCase(tokenRole) || "ADMIN".equalsIgnoreCase(tokenRole))){ resp.setStatus(403); writeJson(resp, java.util.Map.of("error","forbidden")); return; }
             Videojuego v = gson.fromJson(req.getReader(), Videojuego.class);
+            // Basic validation
+            if (v.getNombre() == null || v.getNombre().trim().isEmpty()){ resp.setStatus(HttpServletResponse.SC_BAD_REQUEST); writeJson(resp, java.util.Map.of("error","nombre_required")); return; }
+            if (v.getPrecio() == null) v.setPrecio(new java.math.BigDecimal("0"));
             // If user is company and no empresa specified, set empresa_id via companyId claim in token
-            if ("EMPRESA".equalsIgnoreCase(tokenRole) && (v.getEmpresa() == null || v.getEmpresa().isBlank())){
-                // DAO create defaults to empresa_id=1; better to set company by id claim — use Empresa id in payload when creating
+            if ("EMPRESA".equalsIgnoreCase(tokenRole)){
+                Integer tokenCompany = (Integer) req.getAttribute("companyId");
+                if (tokenCompany != null) v.setEmpresaId(tokenCompany);
             }
             Integer id = service.create(v);
             resp.setStatus(HttpServletResponse.SC_CREATED);

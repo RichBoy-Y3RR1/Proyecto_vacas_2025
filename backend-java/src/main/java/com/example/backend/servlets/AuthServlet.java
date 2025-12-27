@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-@WebServlet(name = "AuthServlet", urlPatterns = {"/api/auth/*"})
+@WebServlet(name = "AuthServlet", urlPatterns = {"*/api/auth/"})
 public class AuthServlet extends BaseServlet {
     private final UserService userService = new UserServiceImpl();
 

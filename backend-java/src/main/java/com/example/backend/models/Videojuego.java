@@ -10,6 +10,8 @@ public class Videojuego {
     private String estado;
     private String empresa;
     private Integer empresaId;
+    private String url_imagen;
+    private String categoria;
     private String edad_clasificacion;
 
     public Integer getId() { return id; }
@@ -26,6 +28,10 @@ public class Videojuego {
     public void setEmpresa(String empresa) { this.empresa = empresa; }
     public Integer getEmpresaId() { return empresaId; }
     public void setEmpresaId(Integer empresaId) { this.empresaId = empresaId; }
+    public String getUrl_imagen() { return url_imagen; }
+    public void setUrl_imagen(String url_imagen) { this.url_imagen = url_imagen; }
+    public String getCategoria() { return categoria; }
+    public void setCategoria(String categoria) { this.categoria = categoria; }
     public String getEdad_clasificacion() { return edad_clasificacion; }
     public void setEdad_clasificacion(String edad_clasificacion) { this.edad_clasificacion = edad_clasificacion; }
 }

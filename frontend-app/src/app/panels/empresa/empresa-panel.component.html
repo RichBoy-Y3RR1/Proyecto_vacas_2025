@@ -1,0 +1,126 @@
+<div class="empresa-panel container">
+  <div class="left-card card">
+    <h3>Empresas</h3>
+    <div *ngIf="loading" class="muted">Cargando...</div>
+    <div *ngIf="error" class="muted">{{error}}</div>
+
+    <div class="company-list">
+      <ul>
+        <li *ngFor="let c of companies" (click)="selectCompany(c)" [class.active]="selectedCompany?.id===c.id">
+          <strong>{{c.nombre}}</strong>
+          <div class="small muted">ID: {{c.id}}</div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="modules" *ngIf="selectedCompany">
+      <h4>Panel: {{selectedCompany.nombre}}</h4>
+      <nav class="module-nav">
+        <button (click)="switchModule('catalog')" [class.active]="selectedModule==='catalog'">🎮 Gestión de juegos</button>
+        <button (click)="switchModule('users')" [class.active]="selectedModule==='users'">🧑‍💼 Usuarios</button>
+        <button (click)="switchModule('comments')" [class.active]="selectedModule==='comments'">💬 Comentarios</button>
+        <button (click)="switchModule('Analitica')" [class.active]="selectedModule==='analytics'">📊 Analytics</button>
+        <button (click)="switchModule('billing')" [class.active]="selectedModule==='billing'">🧾 Facturación</button>
+        <button (click)="switchModule('settings')" [class.active]="selectedModule==='settings'">⚙️ Configuración</button>
+      </nav>
+    </div>
+  </div>
+
+  <main class="card main-area">
+      <div *ngIf="!selectedCompany" class="muted">Selecciona una empresa para ver el panel de control.</div>
+
+      <div *ngIf="formMessage" class="notification" [class.success]="formMessage.type==='success'" [class.error]="formMessage.type==='error'">
+        {{formMessage.text}}
+      </div>
+
+    <section *ngIf="selectedCompany && selectedModule==='catalog'">
+      <h3>Catálogo — {{selectedCompany.nombre}} <button class="small" (click)="createDemoGames()" [disabled]="creatingDemos" style="margin-left:0.6rem">{{ creatingDemos ? 'Creando...' : 'Insertar demos' }}</button></h3>
+      <div *ngIf="catalog.length===0" class="muted">Sin juegos en el catálogo.</div>
+      <div *ngFor="let group of groupedCatalog" class="category-group" style="margin-bottom:1rem">
+        <h4 style="margin:0.4rem 0;padding:0.3rem 0.6rem;background:#f6f7fb;border-radius:6px">{{group.categoria}}</h4>
+        <ul class="users-list">
+          <li *ngFor="let g of group.items" class="catalog-item" style="padding:0.6rem 0;border-bottom:1px solid #f0f0f0">
+            <div style="display:flex;gap:0.8rem;align-items:center">
+              <img [src]="g.url_imagen || 'https://via.placeholder.com/160x90?text=No+Image'" [alt]="g.nombre" style="width:120px;height:68px;object-fit:cover;border-radius:6px;border:1px solid #ddd"/>
+              <div style="flex:1">
+                <strong style="display:block">{{g.nombre}}</strong>
+                <div class="small muted">{{g.categoria}} • Precio: {{g.precio | number:'1.2-2'}} • {{g.estado || (g.for_sale? 'A la venta':'Suspendido')}}</div>
+                <div class="small muted" *ngIf="g.descripcion" style="margin-top:6px">{{g.descripcion}}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.4rem">
+                <button (click)="editGame(g)">Editar</button>
+                <button (click)="toggleSale(g)">{{g.for_sale ? 'Suspender' : 'Reactivar'}}</button>
+                <button class="danger" (click)="removeGame(g)">Eliminar</button>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div style="margin-top:0.6rem">
+        <h5>Crear videojuego</h5>
+        <input placeholder="Nombre" [(ngModel)]="newGameName" />
+        <input placeholder="Precio" type="number" [(ngModel)]="newGamePrice" />
+        <input placeholder="URL imagen (opcional)" [(ngModel)]="newGameImage" />
+        <input placeholder="Categoría (opcional)" [(ngModel)]="newGameCategory" />
+        <textarea placeholder="Descripción" rows="3" [(ngModel)]="newGameDesc"></textarea>
+        <div *ngIf="newGameImage" style="margin:6px 0"><img [src]="newGameImage" alt="preview" style="max-width:140px;border-radius:6px;border:1px solid #ddd"/></div>
+        <div class="form-errors" *ngIf="gameFormErrors.length>0">
+          <div *ngFor="let e of gameFormErrors">• {{e}}</div>
+        </div>
+        <div style="margin-top:0.4rem"><button (click)="createGame()" [disabled]="newGameName.trim()==='' || creatingGame">{{ creatingGame ? 'Creando...' : 'Crear juego' }}</button></div>
+      </div>
+
+      <div *ngIf="editingGame" style="margin-top:0.75rem;border-top:1px solid #eee;padding-top:0.6rem">
+        <h5>Editar: {{editingGame.nombre}}</h5>
+        <input placeholder="Nombre" [(ngModel)]="editingGame.nombre" />
+        <input placeholder="Precio" type="number" [(ngModel)]="editingGame.precio" />
+        <input placeholder="URL imagen (opcional)" [(ngModel)]="editingGame.url_imagen" />
+        <input placeholder="Categoría (opcional)" [(ngModel)]="editingGame.categoria" />
+        <textarea placeholder="Descripción" rows="3" [(ngModel)]="editingGame.descripcion"></textarea>
+        <div *ngIf="editingGame?.url_imagen" style="margin:6px 0"><img [src]="editingGame.url_imagen" alt="preview" style="max-width:140px;border-radius:6px;border:1px solid #ddd"/></div>
+        <div style="margin-top:0.4rem"><button (click)="saveGame()">Guardar</button> <button (click)="editingGame=null">Cancelar</button></div>
+      </div>
+    </section>
+
+    <section *ngIf="selectedCompany && selectedModule==='users'">
+      <h3>Usuarios internos — {{selectedCompany.nombre}}</h3>
+      <div *ngIf="users.length===0" class="muted">Sin usuarios.</div>
+      <ul class="users-list">
+        <li *ngFor="let u of users">
+          <span>{{u.correo || u.email}} <small class="muted">({{u.role}})</small></span>
+          <button class="danger" (click)="removeUser(u)">Eliminar</button>
+        </li>
+      </ul>
+      <div class="add-user">
+        <input placeholder="email@empresa.com" [(ngModel)]="newUserEmail" />
+        <button (click)="addUser()">Agregar usuario</button>
+      </div>
+    </section>
+
+    <section *ngIf="selectedCompany && selectedModule==='comments'">
+      <h3>Comentarios y reseñas</h3>
+      <p class="muted">Visibilidad global: <strong>{{commentVisibilityGlobal ? 'Visible' : 'Oculto'}}</strong></p>
+      <button (click)="toggleCommentVisibilityGlobal()">Alternar visibilidad (cliente)</button>
+      <p class="small muted">Persistencia de visibilidad requiere backend.</p>
+    </section>
+
+    <section *ngIf="selectedCompany && selectedModule==='analytics'">
+      <h3>Analytics</h3>
+      <p class="muted">Ventas, descargas y rating promedio (pendiente de métricas)</p>
+      <div class="muted">Placeholder: implementar métricas en backend.</div>
+    </section>
+
+    <section *ngIf="selectedCompany && selectedModule==='billing'">
+      <h3>Facturación y comisiones</h3>
+      <div class="muted">Comisiones: pendiente de integración con pagos.</div>
+    </section>
+
+    <section *ngIf="selectedCompany && selectedModule==='settings'">
+      <h3>Configuración de empresa</h3>
+      <p><strong>Nombre:</strong> {{selectedCompany.nombre}}</p>
+      <p><strong>Correo:</strong> {{selectedCompany.correo}}</p>
+      <p><strong>Teléfono:</strong> {{selectedCompany.telefono}}</p>
+    </section>
+  </main>
+</div>

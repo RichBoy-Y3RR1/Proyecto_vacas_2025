@@ -92,9 +92,13 @@ public class EmpresaHandler implements HttpHandler {
                     for (String p : parts) {
                         if (p == null || p.isEmpty()) continue;
                         if (!foundEid) {
-                            try { if (Integer.parseInt(p).equals(eid)) { foundEid = true; } } catch(NumberFormatException nfe) { }
+                            try {
+                                // parse numeric candidate and compare to the empresa id
+                                Integer candidate = Integer.valueOf(p);
+                                if (candidate.equals(eid)) { foundEid = true; }
+                            } catch(NumberFormatException nfe) { }
                         } else {
-                            try { uid = Integer.parseInt(p); break; } catch(NumberFormatException nfe) { }
+                            try { uid = Integer.valueOf(p); break; } catch(NumberFormatException nfe) { }
                         }
                     }
                     if (uid == null) { write(ex,400,gson.toJson(java.util.Map.of("error","user id missing or invalid"))); return; }

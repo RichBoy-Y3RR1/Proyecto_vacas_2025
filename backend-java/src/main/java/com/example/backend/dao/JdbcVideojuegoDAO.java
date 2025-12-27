@@ -14,7 +14,7 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
     public List<Videojuego> listAll() throws Exception {
         List<Videojuego> list = new ArrayList<>();
         try (Connection conn = DBConnection.getConnection()){
-            ResultSet rs = conn.createStatement().executeQuery("SELECT v.id, v.nombre, v.descripcion, v.precio, v.estado, e.nombre AS empresa, v.edad_clasificacion, v.empresa_id FROM Videojuego v JOIN Empresa e ON v.empresa_id = e.id");
+            ResultSet rs = conn.createStatement().executeQuery("SELECT v.id, v.nombre, v.descripcion, v.precio, v.estado, e.nombre AS empresa, v.edad_clasificacion, v.empresa_id, v.url_imagen, v.categoria FROM Videojuego v JOIN Empresa e ON v.empresa_id = e.id");
             while (rs.next()){
                 Videojuego v = new Videojuego();
                 v.setId(rs.getInt("id"));
@@ -24,6 +24,8 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
                 v.setEstado(rs.getString("estado"));
                 v.setEmpresa(rs.getString("empresa"));
                 v.setEmpresaId(rs.getInt("empresa_id"));
+                v.setUrl_imagen(rs.getString("url_imagen"));
+                v.setCategoria(rs.getString("categoria"));
                 v.setEdad_clasificacion(rs.getString("edad_clasificacion"));
                 list.add(v);
             }
@@ -34,7 +36,7 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
     @Override
     public Integer create(com.example.backend.models.Videojuego data) throws Exception {
         try (Connection conn = DBConnection.getConnection()){
-            PreparedStatement ps = conn.prepareStatement("INSERT INTO Videojuego (nombre, descripcion, empresa_id, precio, estado, fecha_lanzamiento, edad_clasificacion) VALUES (?,?,?,?,?,NULL,?)", PreparedStatement.RETURN_GENERATED_KEYS);
+            PreparedStatement ps = conn.prepareStatement("INSERT INTO Videojuego (nombre, descripcion, empresa_id, precio, estado, fecha_lanzamiento, edad_clasificacion, url_imagen, categoria) VALUES (?,?,?,?,?,NULL,?,?,?)", PreparedStatement.RETURN_GENERATED_KEYS);
             ps.setString(1, data.getNombre());
             ps.setString(2, data.getDescripcion());
             // use empresaId from payload when provided, otherwise default to 1
@@ -42,6 +44,8 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
             ps.setBigDecimal(4, data.getPrecio() != null ? data.getPrecio() : new java.math.BigDecimal("0"));
             ps.setString(5, "PUBLICADO");
             ps.setString(6, data.getEdad_clasificacion());
+            ps.setString(7, data.getUrl_imagen());
+            ps.setString(8, data.getCategoria());
             ps.executeUpdate(); ResultSet rs = ps.getGeneratedKeys(); if (rs.next()) return rs.getInt(1); return null;
         }
     }
@@ -49,12 +53,14 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
     @Override
     public boolean update(Integer id, com.example.backend.models.Videojuego data) throws Exception {
         try (Connection conn = DBConnection.getConnection()){
-            PreparedStatement ps = conn.prepareStatement("UPDATE Videojuego SET nombre=?, descripcion=?, precio=?, edad_clasificacion=? WHERE id=?");
+            PreparedStatement ps = conn.prepareStatement("UPDATE Videojuego SET nombre=?, descripcion=?, precio=?, edad_clasificacion=?, url_imagen=?, categoria=? WHERE id=?");
             ps.setString(1, data.getNombre());
             ps.setString(2, data.getDescripcion());
             ps.setBigDecimal(3, data.getPrecio() != null ? data.getPrecio() : new java.math.BigDecimal("0"));
             ps.setString(4, data.getEdad_clasificacion());
-            ps.setInt(5, id);
+            ps.setString(5, data.getUrl_imagen());
+            ps.setString(6, data.getCategoria());
+            ps.setInt(7, id);
             return ps.executeUpdate() > 0;
         }
     }

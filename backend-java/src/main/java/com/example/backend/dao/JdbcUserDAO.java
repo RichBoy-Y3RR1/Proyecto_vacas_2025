@@ -16,29 +16,34 @@ public class JdbcUserDAO implements UserDAO {
     @Override
     public Integer create(AbstractUser user) throws Exception {
         try (Connection conn = DBConnection.getConnection()){
-            String sql = "INSERT INTO Usuario (correo, password, role, nickname, fecha_nacimiento, telefono, pais) VALUES (?,?,?,?,?,?,?)";
+            // include 'estado' and 'empresa_id' to match schema (estado NOT NULL)
+            String sql = "INSERT INTO Usuario (correo, password, role, estado, nickname, fecha_nacimiento, telefono, pais, empresa_id) VALUES (?,?,?,?,?,?,?,?,?)";
             PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
             ps.setString(1, user.getEmail());
             ps.setString(2, user.getPasswordHash());
             ps.setString(3, user.getRole());
-            if (user instanceof Gamer){
+            // default new users to active status
+            ps.setString(4, "ACTIVA");
+                if (user instanceof Gamer){
                 Gamer g = (Gamer) user;
-                ps.setString(4, g.getNickname());
-                if (g.getBirthDate() != null) ps.setDate(5, java.sql.Date.valueOf(g.getBirthDate())); else ps.setDate(5, null);
-                ps.setString(6, null);
-                ps.setString(7, g.getCountry());
+                ps.setString(5, g.getNickname());
+                if (g.getBirthDate() != null) ps.setDate(6, java.sql.Date.valueOf(g.getBirthDate())); else ps.setNull(6, java.sql.Types.DATE);
+                ps.setString(7, null);
+                ps.setString(8, g.getCountry());
+                ps.setObject(9, null, java.sql.Types.INTEGER);
             } else if (user instanceof CompanyUser){
                 CompanyUser cu = (CompanyUser) user;
-                ps.setString(4, cu.getName());
-                ps.setDate(5, null);
-                ps.setString(6, null);
+                ps.setString(5, cu.getName());
+                ps.setNull(6, java.sql.Types.DATE);
                 ps.setString(7, null);
+                ps.setString(8, null);
+                if (cu.getCompanyId() != null) ps.setInt(9, cu.getCompanyId()); else ps.setObject(9, null, java.sql.Types.INTEGER);
             } else {
-                ps.setString(4, null); ps.setDate(5,null); ps.setString(6,null); ps.setString(7,null);
+                ps.setString(5, null); ps.setNull(6, java.sql.Types.DATE); ps.setString(7,null); ps.setString(8,null); ps.setObject(9, null, java.sql.Types.INTEGER);
             }
             ps.executeUpdate();
             ResultSet rs = ps.getGeneratedKeys();
-            if (rs.next()) return rs.getInt(1);
+                if (rs.next()) return rs.getInt(1);
             return null;
         }
     }
@@ -63,6 +68,8 @@ public class JdbcUserDAO implements UserDAO {
                 } else if ("EMPRESA".equals(role)){
                     CompanyUser cu = new CompanyUser();
                     cu.setId(rs.getInt("id")); cu.setEmail(rs.getString("correo")); cu.setPasswordHash(rs.getString("password")); cu.setName(rs.getString("nickname")); cu.setRole(role);
+                    Object compObj = rs.getObject("empresa_id");
+                    if (compObj != null) cu.setCompanyId(rs.getInt("empresa_id"));
                     return cu;
                 } else {
                     Admin a = new Admin(); a.setId(rs.getInt("id")); a.setEmail(rs.getString("correo")); a.setPasswordHash(rs.getString("password")); a.setRole(role);
@@ -79,7 +86,7 @@ public class JdbcUserDAO implements UserDAO {
             PreparedStatement ps = conn.prepareStatement("SELECT * FROM Usuario WHERE correo = ?");
             ps.setString(1,email);
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) return findById(rs.getInt("id"));
+                if (rs.next()) return findById(rs.getInt("id"));
             return null;
         }
     }
@@ -108,7 +115,7 @@ public class JdbcUserDAO implements UserDAO {
                 CompanyUser cu = (CompanyUser) user; nickname = cu.getName();
             }
             ps.setString(4, nickname);
-            ps.setDate(5, birth);
+            if (birth != null) ps.setDate(5, birth); else ps.setNull(5, java.sql.Types.DATE);
             ps.setString(6, telefono);
             ps.setString(7, pais);
             ps.setInt(8, user.getId());

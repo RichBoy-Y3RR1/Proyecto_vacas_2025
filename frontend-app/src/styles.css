@@ -1,19 +1,36 @@
-/* You can add global styles to this file, and also import other style files */
-* { box-sizing: border-box; }
-body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 1rem; background:#f7f7fb; color:#222 }
-header { background: #0b5cff; color: white; padding: 1rem; border-radius: 6px; margin-bottom: 1rem }
-h1 { margin: 0 0 0.25rem 0 }
-.container { display:flex; gap:1rem }
-main { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem }
-aside.card { padding:0.75rem }
-.grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 0.75rem }
-.card { background: white; padding: 0.75rem; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.06) }
-.muted { color: #666; font-size: 0.9rem }
-form label { display: block; margin-bottom: 0.5rem }
-input[type=text], input[type=number] { width: 100%; padding: 0.5rem; margin-top: 0.25rem; border:1px solid #ddd; border-radius:4px }
-button { background:#0b5cff; color:white; padding: 0.5rem 0.75rem; border: none; border-radius:4px; cursor:pointer }
-footer { margin-top:1rem; color:#555 }
+/* Global styles and theme variables */
+:root{
+  --bg: #f7f9fc;
+  --card: #ffffff;
+  --muted: #6b7280;
+  --accent: #0b5cff;
+  --danger: #e03a3a;
+}
 
-@media (max-width:800px){ main{ grid-template-columns: 1fr } }
+*{ box-sizing: border-box }
 
-@media (max-width:800px){ .container, main{ grid-template-columns: 1fr; display:block } }
+body{
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  margin: 0; padding: 0.75rem; background: var(--bg); color: #0f172a;
+}
+
+header{ background: var(--accent); color: white; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem }
+.topbar{ display:flex; align-items:center; justify-content:space-between; gap:1rem }
+.brand{ font-weight:700 }
+
+.container{ display:flex; gap:1rem }
+main{ display:grid; grid-template-columns: 2fr 1fr; gap:1rem }
+aside.card{ padding:0.75rem }
+.grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:0.75rem }
+.card{ background:var(--card); padding:0.9rem; border-radius:10px; box-shadow:0 6px 18px rgba(16,24,40,0.06) }
+.muted{ color:var(--muted); font-size:0.95rem }
+
+form label{ display:block; margin-bottom:0.5rem }
+input[type="text"], input[type="number"], input[type="email"]{ width:100%; padding:0.6rem; margin-top:0.25rem; border:1px solid #e6e9ef; border-radius:8px }
+button{ background:var(--accent); color:white; padding:0.5rem 0.75rem; border:none; border-radius:8px; cursor:pointer }
+.danger{ background:var(--danger) }
+
+.small{ font-size:0.85rem }
+
+@media (max-width:800px){ main{ grid-template-columns:1fr } .container, main{ display:block } }
+

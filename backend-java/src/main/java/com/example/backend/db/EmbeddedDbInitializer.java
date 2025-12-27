@@ -26,12 +26,19 @@ public class EmbeddedDbInitializer {
             }
             String[] stmts = sb.toString().split(";\\s*\\n");
             try (Statement st = conn.createStatement()) {
-                // defensive cleanup for dev: drop Banner if exists to avoid duplicate-create errors
-                try { st.execute("DROP TABLE IF EXISTS Banner"); } catch(Exception e) { /* ignore */ }
-                for (String s : stmts) {
-                    String sql = s.trim();
-                    if (sql.isEmpty()) continue;
-                    try { st.execute(sql); } catch (Exception e) { System.out.println("EmbeddedDbInitializer: stmt failed: " + e.getMessage()); }
+                // If schema already present, skip applying schema.sql to avoid duplicate-create and column mismatches
+                boolean schemaPresent = false;
+                try (java.sql.ResultSet rsCheck = st.executeQuery("SELECT COUNT(*) AS c FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='EMPRESA'")){
+                    if (rsCheck.next() && rsCheck.getInt("c")>0) schemaPresent = true;
+                } catch(Exception ex) { /* ignore */ }
+                if (!schemaPresent) {
+                    for (String s : stmts) {
+                        String sql = s.trim();
+                        if (sql.isEmpty()) continue;
+                        try { st.execute(sql); } catch (Exception e) { System.out.println("EmbeddedDbInitializer: stmt failed: " + e.getMessage()); }
+                    }
+                } else {
+                    System.out.println("EmbeddedDbInitializer: schema already exists, skipping schema.sql");
                 }
                 // ensure Usuario.empresa_id exists (some older schemas lacked it)
                 try (ResultSet rs = st.executeQuery("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='USUARIO' AND COLUMN_NAME='EMPRESA_ID'")){
@@ -51,8 +58,8 @@ public class EmbeddedDbInitializer {
                             st.executeUpdate("INSERT INTO Empresa (nombre, correo, telefono, estado) SELECT 'Empresa Demo','demo@empresa.local','+000','ACTIVA' WHERE NOT EXISTS (SELECT 1 FROM Empresa WHERE nombre='Empresa Demo')");
                         } catch(Exception ex) { System.out.println("EmbeddedDbInitializer: insert empresa failed: " + ex.getMessage()); }
                         try {
-                            // insert admin user
-                            st.executeUpdate("INSERT INTO Usuario (correo,password,role,empresa_id,nickname) SELECT 'admin@example.com','pass','ADMIN',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com')");
+                            // insert admin user (include estado to satisfy schemas that require it)
+                            st.executeUpdate("INSERT INTO Usuario (correo,password,role,estado,empresa_id,nickname) SELECT 'admin@example.com','pass','ADMIN','ACTIVA',(SELECT id FROM Empresa WHERE nombre='Empresa Demo'),'admin' WHERE NOT EXISTS (SELECT 1 FROM Usuario WHERE correo='admin@example.com')");
                         } catch(Exception ex) { System.out.println("EmbeddedDbInitializer: insert admin failed: " + ex.getMessage()); }
                         try {
                             // ensure cartera for admin
