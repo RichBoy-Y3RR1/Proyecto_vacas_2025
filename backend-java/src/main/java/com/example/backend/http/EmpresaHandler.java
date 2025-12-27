@@ -60,14 +60,22 @@ public class EmpresaHandler implements HttpHandler {
 
             // manage company users: /api/empresa/{id}/usuarios
             if (path.contains(suffix + "/") && path.contains("/usuarios")){
+                // extract first numeric segment after the suffix to be the empresa id
                 String rem = path.substring(path.indexOf(suffix) + suffix.length()); // like /{id}/usuarios or /{id}/usuarios/{uid}
                 String[] parts = rem.split("/");
-                Integer eid = Integer.parseInt(parts[1]);
+                Integer eid = null;
+                for (String p : parts) {
+                    if (p == null || p.isEmpty()) continue;
+                    try { eid = Integer.parseInt(p); break; } catch(NumberFormatException nfe) { /* not numeric - continue */ }
+                }
+                if (eid == null) { write(ex,400,gson.toJson(java.util.Map.of("error","company id missing or invalid"))); return; }
+
                 if ("GET".equalsIgnoreCase(method)){
                     var rsu = conn.createStatement().executeQuery("SELECT id, correo, nickname, fecha_nacimiento, role FROM Usuario WHERE empresa_id = " + eid);
                     java.util.List<java.util.Map<String,Object>> list = new java.util.ArrayList<>(); while (rsu.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rsu.getInt("id")); m.put("correo", rsu.getString("correo")); m.put("nickname", rsu.getString("nickname")); m.put("fecha_nacimiento", rsu.getString("fecha_nacimiento")); m.put("role", rsu.getString("role")); list.add(m); }
                     write(ex,200,gson.toJson(list)); return;
                 }
+
                 if ("POST".equalsIgnoreCase(method)){
                     var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);
                     String uemail = String.valueOf(body.get("email")); String uname = body.containsKey("name") ? String.valueOf(body.get("name")) : null; String dob = body.containsKey("birthDate") ? String.valueOf(body.get("birthDate")) : null;
@@ -75,8 +83,22 @@ public class EmpresaHandler implements HttpHandler {
                     pus.setString(1,uemail); pus.setString(2,"pass"); pus.setString(3,"EMPRESA"); pus.setString(4,uname); if (dob!=null) pus.setString(5,dob); else pus.setNull(5, java.sql.Types.VARCHAR); pus.setInt(6,eid); pus.executeUpdate(); var rsg = pus.getGeneratedKeys(); Integer uid = null; if (rsg.next()) uid = rsg.getInt(1);
                     write(ex,201,gson.toJson(java.util.Map.of("id", uid))); return;
                 }
-                if ("DELETE".equalsIgnoreCase(method) && rem.contains("/usuarios/")){
-                    Integer uid = Integer.parseInt(parts[3]); var pdel = conn.prepareStatement("DELETE FROM Usuario WHERE id = ? AND empresa_id = ?"); pdel.setInt(1, uid); pdel.setInt(2, eid); int del = pdel.executeUpdate(); write(ex,200,gson.toJson(java.util.Map.of("deleted", del))); return;
+
+                // DELETE: expect URL like .../{id}/usuarios/{uid}
+                if ("DELETE".equalsIgnoreCase(method)){
+                    // find numeric uid after the empresa id
+                    Integer uid = null;
+                    boolean foundEid = false;
+                    for (String p : parts) {
+                        if (p == null || p.isEmpty()) continue;
+                        if (!foundEid) {
+                            try { if (Integer.parseInt(p).equals(eid)) { foundEid = true; } } catch(NumberFormatException nfe) { }
+                        } else {
+                            try { uid = Integer.parseInt(p); break; } catch(NumberFormatException nfe) { }
+                        }
+                    }
+                    if (uid == null) { write(ex,400,gson.toJson(java.util.Map.of("error","user id missing or invalid"))); return; }
+                    var pdel = conn.prepareStatement("DELETE FROM Usuario WHERE id = ? AND empresa_id = ?"); pdel.setInt(1, uid); pdel.setInt(2, eid); int del = pdel.executeUpdate(); write(ex,200,gson.toJson(java.util.Map.of("deleted", del))); return;
                 }
             }
 
