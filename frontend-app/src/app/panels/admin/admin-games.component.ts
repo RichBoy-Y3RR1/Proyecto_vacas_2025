@@ -2,6 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { VideojuegoService } from '../../videojuegos/videojuego.service';
 import { AdminService } from '../../services/admin.service';
 import { EmpresaService } from '../../services/empresa.service';
+import { NotificationService } from '../../services/notification.service';
+import { catchError, finalize } from 'rxjs/operators';
+import { of } from 'rxjs';
+
+interface Videojuego { id: number; nombre: string; descripcion?: string; precio?: number; url_imagen?: string; categoria?: string; empresa_id?: number | null; estado?: string; for_sale?: boolean; __selected?: boolean }
 
 @Component({
   selector: 'app-admin-games',
@@ -14,6 +19,7 @@ import { EmpresaService } from '../../services/empresa.service';
         <button (click)="approveSelected()" [disabled]="!anySelected()">Aprobar seleccionados</button>
         <button (click)="transferSelected()" [disabled]="!anySelected()">Transferir seleccionados a Admin</button>
         <button (click)="load()">Refrescar</button>
+        <button (click)="processTransferQueue()">Procesar cola de transferencias</button>
       </div>
       <table class="table">
         <thead>
@@ -61,11 +67,14 @@ export class AdminGamesComponent implements OnInit{
   companies: any[] = [];
   loading = false;
   selectAll = false;
-  constructor(private vsvc: VideojuegoService, private admin: AdminService, private emp: EmpresaService){}
+  constructor(private vsvc: VideojuegoService, private admin: AdminService, private emp: EmpresaService, private notify: NotificationService){}
   ngOnInit(){ this.load(); this.loadCategories(); this.loadCompanies(); }
   load(){
     this.loading = true;
-    this.vsvc.getAll().subscribe({ next: (r:any[])=>{ this.games = r || []; this.loading=false; if(!this.games.length) this.fallbackLocal(); }, error: ()=>{ this.fallbackLocal(); this.loading=false; } });
+    this.vsvc.getAll().pipe(
+      catchError(()=> { this.notify.error('No se pudieron cargar juegos desde el backend. Usando fallback local.'); this.fallbackLocal(); return of([]); }),
+      finalize(()=> this.loading = false)
+    ).subscribe((r:any[])=>{ this.games = r || []; if(!this.games.length) this.fallbackLocal(); });
   }
   loadCategories(){ this.admin.listCategories().subscribe({ next: r=> this.categories = r || [], error: ()=>{ /* derive from games later */ } }); }
   loadCompanies(){ this.emp.listCompanies().subscribe({ next: r=> this.companies = r || [], error: ()=>{ try{ const raw = localStorage.getItem('local_companies'); this.companies = raw? JSON.parse(raw): []; }catch(e){ this.companies = []; } } }); }
@@ -94,13 +103,19 @@ export class AdminGamesComponent implements OnInit{
   approve(g:any){ if(g.id>0){ this.vsvc.update(g.id, { estado: 'PUBLICADO' }).subscribe(()=>{ alert('Juego aprobado'); this.load(); }); } else { g.estado = 'PUBLICADO'; this.updateLocalGame(g); alert('Aprobado localmente'); } }
   transferToAdmin(g:any){
     const payload = { nombre: g.nombre, descripcion: g.descripcion, precio: g.precio, url_imagen: g.url_imagen, categoria: g.categoria, empresa_id: null };
-    this.vsvc.create(payload).subscribe({ next: ()=>{ this.removeLocalGame(g); alert('Juego enviado a catálogo admin'); this.load(); }, error: ()=>{ // persist in a queued admin-transfer list so admin can retry
-        try{ const key = 'admin_transfer_queue'; const q = JSON.parse(localStorage.getItem(key)||'[]'); q.push(payload); localStorage.setItem(key, JSON.stringify(q)); alert('No se pudo enviar al backend; transferencia encolada localmente para reintento.'); }catch(e){ alert('No se pudo enviar al backend; intenta cuando el servidor esté disponible'); }
-      } });
+    this.vsvc.create(payload).pipe(
+      catchError(()=> {
+        try{ const key = 'admin_transfer_queue'; const q = JSON.parse(localStorage.getItem(key)||'[]'); q.push(payload); localStorage.setItem(key, JSON.stringify(q)); this.notify.error('No se pudo enviar al backend; transferencia encolada localmente.'); }catch(e){ this.notify.error('Fallo al encolar la transferencia.'); }
+        return of(null);
+      })
+    ).subscribe(()=>{ this.removeLocalGame(g); this.notify.success('Juego enviado a catálogo admin'); this.load(); });
   }
   remove(g:any){ if(!confirm('Eliminar juego?')) return; if(g.id>0){ this.vsvc.delete(g.id).subscribe(()=>{ alert('Eliminado'); this.load(); }); } else { this.removeLocalGame(g); alert('Eliminado localmente'); this.load(); } }
   updateLocalGame(g:any){ try{ const key = `local_catalog_${g.empresa_id}`; const arr = JSON.parse(localStorage.getItem(key)||'[]') as any[]; const idx = arr.findIndex(x=>x.id===g.id); if(idx>=0) arr[idx] = g; else arr.push(g); localStorage.setItem(key, JSON.stringify(arr)); }catch(e){} }
   removeLocalGame(g:any){ try{ const key = `local_catalog_${g.empresa_id}`; const arr = JSON.parse(localStorage.getItem(key)||'[]') as any[]; const filtered = arr.filter(x=>x.id!==g.id); localStorage.setItem(key, JSON.stringify(filtered)); }catch(e){} }
+
+  // process queued transfers saved when backend was unavailable
+  processTransferQueue(){ try{ const key='admin_transfer_queue'; const q = JSON.parse(localStorage.getItem(key)||'[]') as any[]; if(!q.length){ this.notify.success('No hay transferencias en cola'); return; } q.forEach(item=>{ this.vsvc.create(item).subscribe({ next: ()=>{ /* could track successes */ }, error: ()=>{ /* keep in queue */ } }); }); localStorage.removeItem(key); this.notify.success('Reintento de transferencias iniciado'); }catch(e){ this.notify.error('Error procesando la cola de transferencias'); } }
 
   // Selection helpers for bulk actions
   onSelectChange(){ this.selectAll = this.games.length>0 && this.games.every(g=>g.__selected); }

@@ -1,5 +1,10 @@
 import { Component } from '@angular/core';
 import { AdminService } from '../../services/admin.service';
+import { NotificationService } from '../../services/notification.service';
+import { catchError, finalize } from 'rxjs/operators';
+import { of } from 'rxjs';
+
+interface CommissionResponse { global?: number }
 
 @Component({
   selector: 'app-admin-commissions',
@@ -20,14 +25,24 @@ import { AdminService } from '../../services/admin.service';
 })
 export class AdminCommissionsComponent{
   global = 0; companyId = 0; companyPct = 0;
-  constructor(private admin: AdminService){
-    // try backend first
-    this.admin.listCommissions().subscribe({ next: r=>{ if (r && r.global!=null) this.global = Number(r.global); }, error: ()=>{ this.global = this.admin.getGlobalCommission(); } });
+  loading = false;
+  constructor(private admin: AdminService, private notify: NotificationService){
+    this.loading = true;
+    this.admin.listCommissions().pipe(
+      catchError(()=> { this.global = this.admin.getGlobalCommission(); this.notify.error('No se pudieron obtener comisiones del backend. Usando valor local.'); return of({}); }),
+      finalize(()=> this.loading = false)
+    ).subscribe((r: any)=>{ if (r && r.global!=null) this.global = Number(r.global); });
   }
-  saveGlobal(){
-    this.admin.setGlobalCommissionBackend(Number(this.global)).subscribe({ next: ()=> alert('Comisión global guardada'), error: ()=>{ this.admin.setGlobalCommission(Number(this.global)); alert('Guardada en local (backend no disponible)'); } });
+  saveGlobal(){ this.loading = true;
+    this.admin.setGlobalCommissionBackend(Number(this.global)).pipe(
+      catchError(()=> { this.admin.setGlobalCommission(Number(this.global)); this.notify.error('Backend no disponible. Comisión guardada localmente.'); return of(null); }),
+      finalize(()=> this.loading=false)
+    ).subscribe(()=> this.notify.success('Comisión global guardada'));
   }
-  saveCompany(){
-    this.admin.setCompanyCommissionBackend(Number(this.companyId), Number(this.companyPct)).subscribe({ next: ()=> alert('Comisión de empresa guardada'), error: ()=>{ this.admin.setCompanyCommission(Number(this.companyId), Number(this.companyPct)); alert('Guardada en local (backend no disponible)'); } });
+  saveCompany(){ this.loading = true;
+    this.admin.setCompanyCommissionBackend(Number(this.companyId), Number(this.companyPct)).pipe(
+      catchError(()=> { this.admin.setCompanyCommission(Number(this.companyId), Number(this.companyPct)); this.notify.error('Backend no disponible. Comisión guardada localmente.'); return of(null); }),
+      finalize(()=> this.loading=false)
+    ).subscribe(()=> this.notify.success('Comisión de empresa guardada'));
   }
 }
