@@ -39,3 +39,4 @@ Thumbs.db
 
 # build artifacts
 /dist/
+AppData/Local/
