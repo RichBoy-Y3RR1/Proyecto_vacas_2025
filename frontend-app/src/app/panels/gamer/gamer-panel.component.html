@@ -1,0 +1,14 @@
+<div class="gamer-panel">
+  <h2>Gamer Panel</h2>
+  <p *ngIf="user">Bienvenido, {{ user.name || user.email }}</p>
+
+  <nav>
+    <button (click)="view='profile'">Perfil</button>
+    <button (click)="view='library'">Biblioteca</button>
+  </nav>
+
+  <section>
+    <app-gamer-profile *ngIf="view==='profile'"></app-gamer-profile>
+    <app-gamer-library *ngIf="view==='library'"></app-gamer-library>
+  </section>
+</div>

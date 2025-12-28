@@ -10,6 +10,8 @@ import { AuthComponent } from './auth/auth.component';
 import { VideojuegosComponent } from './videojuegos/videojuegos.component';
 import { TopbarComponent } from './shared/topbar/topbar.component';
 import { GamerPanelComponent } from './panels/gamer/gamer-panel.component';
+import { GamerProfileComponent } from './panels/gamer/gamer-profile.component';
+import { GamerLibraryComponent } from './panels/gamer/gamer-library.component';
 import { AdminPanelComponent } from './panels/admin/admin-panel.component';
 import { EmpresaPanelComponent } from './panels/empresa/empresa-panel.component';
 import { AuthGuard } from './guards/auth.guard';
@@ -44,6 +46,8 @@ const routes: Routes = [
     ,VideojuegosComponent,
     TopbarComponent,
     GamerPanelComponent,
+    GamerProfileComponent,
+    GamerLibraryComponent,
     AdminPanelComponent,
     EmpresaPanelComponent
     ,AdminCategoriesComponent

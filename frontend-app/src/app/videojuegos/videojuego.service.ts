@@ -5,7 +5,8 @@ import { Observable, of } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class VideojuegoService {
   // Use relative proxy path so dev server proxy handles requests and avoids CORS
-  private base = '/tienda-backend-1.0.0/api/videojuegos';
+  // direct backend URL to avoid proxy mismatch
+  private base = 'http://localhost:8080/backend/api/videojuegos';
   constructor(private http: HttpClient) {}
   getAll(): Observable<any[]> { return this.http.get<any[]>(this.base); }
   getById(id:number){
@@ -20,3 +21,4 @@ export class VideojuegoService {
   toggleForSale(id:number, forSale:boolean){ return this.http.patch(`${this.base}/${id}`, { for_sale: forSale }); }
   delete(id:number){ return this.http.delete(`${this.base}/${id}`); }
 }
+

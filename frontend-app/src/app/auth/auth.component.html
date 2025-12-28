@@ -56,9 +56,24 @@
               <input formControlName="name" placeholder="Company name">
             </div>
             <div class="reg-actions">
-              <button type="button" class="ghost" (click)="regForm.patchValue({role:'USUARIO'}); registerGamer()">Register Gamer</button>
-              <button type="button" class="ghost" (click)="regForm.patchValue({role:'EMPRESA'}); registerEmpresa()">Register Company</button>
+              <button type="button" class="ghost" [disabled]="registering" (click)="regForm.patchValue({role:'USUARIO'}); registerGamer()">
+                <span *ngIf="!registering">Register Gamer</span>
+                <span *ngIf="registering">Registrando...</span>
+              </button>
+              <button type="button" class="ghost" [disabled]="registering" (click)="regForm.patchValue({role:'EMPRESA'}); registerEmpresa()">
+                <span *ngIf="!registering">Register Company</span>
+                <span *ngIf="registering">Registrando...</span>
+              </button>
             </div>
+              <div class="input-group small">
+                <input formControlName="birthDate" type="date" placeholder="Fecha de nacimiento">
+              </div>
+              <div class="input-group small">
+                <input formControlName="phone" placeholder="Teléfono">
+              </div>
+              <div class="input-group small">
+                <input formControlName="country" placeholder="País">
+              </div>
             <div class="reg-close"><a (click)="showRegister = false">Close</a></div>
           </form>
         </div>

@@ -30,6 +30,7 @@ public class AuthHandler implements HttpHandler {
             if ("POST".equalsIgnoreCase(method) && (path.endsWith(suffix) || path.endsWith(suffix + "/register"))){
                 Map body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), Map.class);
                 String email = (String) body.get("email"); String password = (String) body.get("password");
+                if (email != null) email = email.toLowerCase().trim();
                 String role = (String) body.getOrDefault("role","USUARIO");
                 com.example.backend.models.AbstractUser user;
                 if ("EMPRESA".equalsIgnoreCase(role)){
@@ -37,16 +38,41 @@ public class AuthHandler implements HttpHandler {
                 } else if ("ADMIN".equalsIgnoreCase(role)){
                     com.example.backend.models.Admin a = new com.example.backend.models.Admin(); a.setEmail(email); a.setPasswordHash(password); a.setRole("ADMIN"); a.setFullName((String)body.getOrDefault("fullName", null)); user = a;
                 } else {
-                    com.example.backend.models.Gamer g = new com.example.backend.models.Gamer(); g.setEmail(email); g.setPasswordHash(password); g.setRole("USUARIO"); g.setNickname((String)body.getOrDefault("nickname", null)); user = g;
+                    com.example.backend.models.Gamer g = new com.example.backend.models.Gamer(); g.setEmail(email); g.setPasswordHash(password); g.setRole("USUARIO"); g.setNickname((String)body.getOrDefault("nickname", null));
+                    // optional fields
+                    try { Object bd = body.get("fecha_nacimiento"); if (bd!=null) g.setBirthDate(java.time.LocalDate.parse(String.valueOf(bd))); } catch(Exception _e){}
+                    try { Object cty = body.get("pais"); if (cty!=null) g.setCountry(String.valueOf(cty)); } catch(Exception _e){}
+                    user = g;
                 }
                 Integer id = userService.register(user);
-                write(ex,200,gson.toJson(Map.of("id", id)));
+                // if created, respond like login: token + user object
+                if (id != null) {
+                    // use the user object we just created (avoid extra DB lookup which may fail in some DB configs)
+                    try {
+                        user.setId(id);
+                        java.util.Map<String,Object> claims = new java.util.HashMap<>(); claims.put("userId", id); claims.put("role", user.getRole());
+                        if (user instanceof com.example.backend.models.CompanyUser){ Integer cid = ((com.example.backend.models.CompanyUser)user).getCompanyId(); if (cid != null) claims.put("companyId", cid); }
+                        String token = JwtUtil.createToken(claims);
+                        java.util.Map<String,Object> out = new java.util.HashMap<>(); out.put("token", token);
+                        java.util.Map<String,Object> userMap = new java.util.HashMap<>(); userMap.put("id", user.getId()); userMap.put("email", user.getEmail()); userMap.put("role", user.getRole());
+                        if (user instanceof com.example.backend.models.CompanyUser){ Integer cid = ((com.example.backend.models.CompanyUser)user).getCompanyId(); if (cid != null){ userMap.put("companyId", cid); userMap.put("empresaId", cid); userMap.put("empresa_id", cid); } }
+                        out.put("user", userMap);
+                        write(ex,200,gson.toJson(out));
+                        return;
+                    } catch (Exception _e) {
+                        _e.printStackTrace();
+                        write(ex,500,gson.toJson(Map.of("error","created_but_error")));
+                        return;
+                    }
+                }
+                write(ex,500,gson.toJson(Map.of("error","could_not_create")));
                 return;
             }
 
             if ("POST".equalsIgnoreCase(method) && path.endsWith(suffix + "/login")){
                 Map body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), Map.class);
                 String email = (String) body.get("email"); String password = (String) body.get("password");
+                if (email != null) email = email.toLowerCase().trim();
                 var found = userService.findByEmail(email);
                 if (found==null || !password.equals(found.getPasswordHash())){ write(ex,401,gson.toJson(Map.of("error","invalid"))); return; }
                 java.util.Map<String,Object> claims = new java.util.HashMap<>(); claims.put("userId", found.getId()); claims.put("role", found.getRole());
@@ -75,7 +101,11 @@ public class AuthHandler implements HttpHandler {
             }
 
             write(ex,404,gson.toJson(Map.of("error","not_found")));
-        } catch (Exception e){ try{ write(ex,500,gson.toJson(Map.of("error", e.getMessage()))); } catch(Exception exx){} }
+        } catch (Exception e){
+            // Log full stacktrace so we can see root cause in server console
+            e.printStackTrace();
+            try{ write(ex,500,gson.toJson(Map.of("error", e.getMessage()))); } catch(Exception exx){}
+        }
     }
 
     private void write(HttpExchange ex, int status, String body) throws Exception { byte[] b = body.getBytes(StandardCharsets.UTF_8); ex.sendResponseHeaders(status, b.length); try (OutputStream os = ex.getResponseBody()){ os.write(b); } }

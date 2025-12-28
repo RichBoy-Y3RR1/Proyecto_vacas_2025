@@ -35,13 +35,23 @@ public class CarteraHandler implements HttpHandler {
                 try { Object uo = body.get("usuario_id"); if (uo instanceof Number) usuarioId = ((Number)uo).intValue(); else usuarioId = Integer.parseInt(String.valueOf(uo)); } catch(Exception _e) { }
                 try { Object so = body.get("saldo"); if (so instanceof Number) saldo = new java.math.BigDecimal(((Number)so).toString()); else saldo = new java.math.BigDecimal(String.valueOf(so)); } catch(Exception _e) { }
                 if (usuarioId == null) { write(ex,400,gson.toJson(java.util.Map.of("error","usuario_id required"))); return; }
+                // validate that user exists to avoid FK violations
+                try (java.sql.PreparedStatement check = conn.prepareStatement("SELECT id FROM Usuario WHERE id = ?")){
+                    check.setInt(1, usuarioId);
+                    var rsu = check.executeQuery();
+                    if (!rsu.next()) { write(ex,400,gson.toJson(java.util.Map.of("error","usuario_not_found"))); return; }
+                }
                 var ps = conn.prepareStatement("INSERT INTO Cartera (usuario_id, saldo) VALUES (?,?)", java.sql.PreparedStatement.RETURN_GENERATED_KEYS);
                 ps.setInt(1, usuarioId); ps.setBigDecimal(2, saldo); ps.executeUpdate(); var rs = ps.getGeneratedKeys(); Integer id = null; if (rs.next()) id = rs.getInt(1);
                 write(ex,201,gson.toJson(java.util.Map.of("id", id))); return;
             }
 
             write(ex,405,gson.toJson(java.util.Map.of("error","method not allowed")));
-        } catch (Exception e){ try { write(ex,500,gson.toJson(java.util.Map.of("error", e.getMessage()))); } catch(Exception exx){} }
+        } catch (Exception e){
+            // log full stacktrace to server console to aid debugging
+            e.printStackTrace();
+            try { write(ex,500,gson.toJson(java.util.Map.of("error", e.getMessage()))); } catch(Exception exx){}
+        }
     }
 
     private void write(HttpExchange ex, int status, String body) throws Exception { byte[] b = body.getBytes(StandardCharsets.UTF_8); ex.sendResponseHeaders(status, b.length); try (OutputStream os = ex.getResponseBody()){ os.write(b); } }

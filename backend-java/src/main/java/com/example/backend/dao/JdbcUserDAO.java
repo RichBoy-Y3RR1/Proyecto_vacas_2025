@@ -16,30 +16,28 @@ public class JdbcUserDAO implements UserDAO {
     @Override
     public Integer create(AbstractUser user) throws Exception {
         try (Connection conn = DBConnection.getConnection()){
-            // include 'estado' and 'empresa_id' to match schema (estado NOT NULL)
-            String sql = "INSERT INTO Usuario (correo, password, role, estado, nickname, fecha_nacimiento, telefono, pais, empresa_id) VALUES (?,?,?,?,?,?,?,?,?)";
+            // include 'estado' and omit empresa_id to match init_mysql.sql schema (created_at present)
+            String sql = "INSERT INTO Usuario (correo, password, role, estado, nickname, fecha_nacimiento, telefono, pais) VALUES (?,?,?,?,?,?,?,?)";
             PreparedStatement ps = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
             ps.setString(1, user.getEmail());
             ps.setString(2, user.getPasswordHash());
             ps.setString(3, user.getRole());
             // default new users to active status
             ps.setString(4, "ACTIVA");
-                if (user instanceof Gamer){
+            if (user instanceof Gamer){
                 Gamer g = (Gamer) user;
                 ps.setString(5, g.getNickname());
                 if (g.getBirthDate() != null) ps.setDate(6, java.sql.Date.valueOf(g.getBirthDate())); else ps.setNull(6, java.sql.Types.DATE);
                 ps.setString(7, null);
                 ps.setString(8, g.getCountry());
-                ps.setObject(9, null, java.sql.Types.INTEGER);
             } else if (user instanceof CompanyUser){
                 CompanyUser cu = (CompanyUser) user;
                 ps.setString(5, cu.getName());
                 ps.setNull(6, java.sql.Types.DATE);
                 ps.setString(7, null);
                 ps.setString(8, null);
-                if (cu.getCompanyId() != null) ps.setInt(9, cu.getCompanyId()); else ps.setObject(9, null, java.sql.Types.INTEGER);
             } else {
-                ps.setString(5, null); ps.setNull(6, java.sql.Types.DATE); ps.setString(7,null); ps.setString(8,null); ps.setObject(9, null, java.sql.Types.INTEGER);
+                ps.setString(5, null); ps.setNull(6, java.sql.Types.DATE); ps.setString(7,null); ps.setString(8,null);
             }
             ps.executeUpdate();
             ResultSet rs = ps.getGeneratedKeys();
@@ -68,8 +66,11 @@ public class JdbcUserDAO implements UserDAO {
                 } else if ("EMPRESA".equals(role)){
                     CompanyUser cu = new CompanyUser();
                     cu.setId(rs.getInt("id")); cu.setEmail(rs.getString("correo")); cu.setPasswordHash(rs.getString("password")); cu.setName(rs.getString("nickname")); cu.setRole(role);
-                    Object compObj = rs.getObject("empresa_id");
-                    if (compObj != null) cu.setCompanyId(rs.getInt("empresa_id"));
+                    // empresa_id column may not exist in schema; guard retrieve
+                    try {
+                        Object compObj = rs.getObject("empresa_id");
+                        if (compObj != null) cu.setCompanyId(rs.getInt("empresa_id"));
+                    } catch (Exception _e) { /* ignore if column missing */ }
                     return cu;
                 } else {
                     Admin a = new Admin(); a.setId(rs.getInt("id")); a.setEmail(rs.getString("correo")); a.setPasswordHash(rs.getString("password")); a.setRole(role);
@@ -83,8 +84,8 @@ public class JdbcUserDAO implements UserDAO {
     @Override
     public AbstractUser findByEmail(String email) throws Exception {
         try (Connection conn = DBConnection.getConnection()){
-            PreparedStatement ps = conn.prepareStatement("SELECT * FROM Usuario WHERE correo = ?");
-            ps.setString(1,email);
+            PreparedStatement ps = conn.prepareStatement("SELECT id FROM Usuario WHERE LOWER(correo) = ?");
+            ps.setString(1, email == null ? null : email.toLowerCase().trim());
             ResultSet rs = ps.executeQuery();
                 if (rs.next()) return findById(rs.getInt("id"));
             return null;

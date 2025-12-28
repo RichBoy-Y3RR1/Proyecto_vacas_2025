@@ -4,7 +4,8 @@ import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
-  private base = 'http://localhost:8080/tienda-backend-1.0.0/api';
+  // direct backend URL to avoid dev-server proxy issues
+  private base = 'http://localhost:8080/backend/api';
   constructor(private http: HttpClient) {}
   listCategories(): Observable<any[]> {
     return this.http.get<any[]>(`${this.base}/categorias`);
@@ -61,3 +62,4 @@ export class AdminService {
     );
   }
 }
+

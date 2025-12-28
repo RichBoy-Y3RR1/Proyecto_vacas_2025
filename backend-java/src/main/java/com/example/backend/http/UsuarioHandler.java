@@ -26,7 +26,7 @@ public class UsuarioHandler implements HttpHandler {
             String suffix = "/api/usuarios";
             if ("GET".equalsIgnoreCase(method) && path.endsWith(suffix)){
                 List<AbstractUser> all = userService.listAll();
-                var profiles = all.stream().map(AbstractUser::publicProfile).toList();
+                var profiles = all.stream().map(u -> u.publicProfile()).toList();
                 write(ex,200,gson.toJson(profiles)); return;
             }
             // create/register user
@@ -50,7 +50,7 @@ public class UsuarioHandler implements HttpHandler {
             // GET by id: path may end with /api/usuarios/{id}
             if ("GET".equalsIgnoreCase(method) && path.contains(suffix + "/")){
                 String idStr = path.substring(path.lastIndexOf('/') + 1);
-                try { Integer id = Integer.parseInt(idStr); var u = userService.getById(id); if (u == null) { write(ex,404,gson.toJson(java.util.Collections.singletonMap("error","not_found"))); } else { write(ex,200,gson.toJson(u.publicProfile())); } return; } catch(Exception exx){ /* fallthrough */ }
+                try { Integer id = Integer.parseInt(idStr); AbstractUser u = userService.find(id); if (u == null) { write(ex,404,gson.toJson(java.util.Collections.singletonMap("error","not_found"))); } else { write(ex,200,gson.toJson(u.publicProfile())); } return; } catch(Exception exx){ /* fallthrough */ }
             }
             write(ex,405,gson.toJson(java.util.Collections.singletonMap("error","method not allowed")));
         } catch (Exception e){ try { write(ex,500,gson.toJson(java.util.Collections.singletonMap("error", e.getMessage()))); } catch (Exception exx){} }

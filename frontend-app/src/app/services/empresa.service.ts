@@ -6,7 +6,7 @@ import { catchError } from 'rxjs/operators';
 @Injectable({ providedIn: 'root' })
 export class EmpresaService {
   // Use relative proxy path so `ng serve --proxy-config` forwards requests to backend
-  private base = '/tienda-backend-1.0.0/api';
+  private base = '/api';
   constructor(private http: HttpClient) {}
   listCompanies(): Observable<any[]> {
     return this.http.get<any[]>(`${this.base}/empresas`).pipe(catchError(err => {
@@ -81,3 +81,4 @@ export class EmpresaService {
     }));
   }
 }
+

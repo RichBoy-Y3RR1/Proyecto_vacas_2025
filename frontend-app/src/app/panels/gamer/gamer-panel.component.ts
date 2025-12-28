@@ -1,7 +1,13 @@
 import { Component } from '@angular/core';
+import { AuthService } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-gamer-panel',
-  template: `<h2>Gamer Panel</h2><p>Aquí las acciones de jugador (compras, perfil).</p>`
+  templateUrl: './gamer-panel.component.html',
+  styleUrls: ['./gamer-panel.component.css']
 })
-export class GamerPanelComponent {}
+export class GamerPanelComponent {
+  user = this.auth.getCurrentUser();
+  view: 'profile'|'library' = 'profile';
+  constructor(private auth: AuthService) {}
+}
