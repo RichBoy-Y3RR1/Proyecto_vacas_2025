@@ -18,6 +18,7 @@ import { AdminCategoriesComponent } from './panels/admin/admin-categories.compon
 import { AdminBannersComponent } from './panels/admin/admin-banners.component';
 import { AdminCommissionsComponent } from './panels/admin/admin-commissions.component';
 import { AdminReportsComponent } from './panels/admin/admin-reports.component';
+import { AdminGamesComponent } from './panels/admin/admin-games.component';
 import { AdminService } from './services/admin.service';
 
 const routes: Routes = [
@@ -28,6 +29,7 @@ const routes: Routes = [
   { path: 'admin', component: AdminPanelComponent, canActivate: [AuthGuard, RoleGuard], data: { role: ['ADMIN'] },
     children: [
       { path: 'categorias', component: AdminCategoriesComponent },
+      { path: 'juegos', component: AdminGamesComponent },
       { path: 'banners', component: AdminBannersComponent },
       { path: 'comisiones', component: AdminCommissionsComponent },
       { path: 'reportes', component: AdminReportsComponent }
@@ -48,6 +50,7 @@ const routes: Routes = [
     ,AdminBannersComponent
     ,AdminCommissionsComponent
     ,AdminReportsComponent
+    ,AdminGamesComponent
   ],
   imports: [
     BrowserModule,

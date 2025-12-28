@@ -13,6 +13,7 @@ import { AuthService } from '../../auth/auth.service';
       <a routerLink="./categorias">Categorías</a> |
       <a routerLink="./banners">Banners</a> |
       <a routerLink="./comisiones">Comisiones</a> |
+      <a routerLink="./juegos">Juegos</a> |
       <a routerLink="./reportes">Reportes</a>
     </nav>
     <router-outlet></router-outlet>
