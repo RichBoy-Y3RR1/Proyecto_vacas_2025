@@ -11,25 +11,25 @@
 
         <form [formGroup]="loginForm" (ngSubmit)="submitLogin()" class="login-form">
           <div class="input-group">
-            <span class="icon">📧</span>
+            <span class="icon">:)</span>
             <input formControlName="email" type="email" placeholder="Username or Email" autocomplete="username">
           </div>
 
           <div class="input-group">
-            <span class="icon">🔒</span>
+            <span class="icon">:)</span>
             <input formControlName="password" type="password" placeholder="Password" autocomplete="current-password">
           </div>
 
-          <button type="submit" class="btn-primary">LOGIN</button>
+          <button type="submit" class="btn-primary">INICIAR SESIÓN</button>
         </form>
 
         <div class="small-links">
-          <a class="muted-link">Forgot Password?</a>
+          <a class="muted-link">Se te olvidó la contraseña?</a>
         </div>
 
         <div class="signup-row">
-          <span>Don't have an account?</span>
-          <a class="link" (click)="showRegister = true">Sign Up</a>
+          <span>No tienes una cuenta?</span>
+          <a class="link" (click)="showRegister = true">Registrate</a>
         </div>
 
         <div class="or-sep"><span>OR</span></div>
@@ -41,7 +41,7 @@
         </div>
 
         <div *ngIf="showRegister" class="register-panel">
-          <h3 class="reg-title">Create account</h3>
+          <h3 class="reg-title">Crear cuenta</h3>
           <form [formGroup]="regForm" (ngSubmit)="submitRegister()" class="reg-form">
             <div class="input-group small">
               <input formControlName="email" type="email" placeholder="Email">
@@ -53,15 +53,19 @@
               <input formControlName="nickname" placeholder="Nickname">
             </div>
             <div *ngIf="regForm.get('role')?.value==='EMPRESA'" class="input-group small">
-              <input formControlName="name" placeholder="Company name">
+              <input formControlName="Nombre" placeholder="Nombre">
             </div>
             <div class="reg-actions">
               <button type="button" class="ghost" [disabled]="registering" (click)="regForm.patchValue({role:'USUARIO'}); registerGamer()">
-                <span *ngIf="!registering">Register Gamer</span>
+                <span *ngIf="!registering">Registro Gamer</span>
                 <span *ngIf="registering">Registrando...</span>
               </button>
               <button type="button" class="ghost" [disabled]="registering" (click)="regForm.patchValue({role:'EMPRESA'}); registerEmpresa()">
-                <span *ngIf="!registering">Register Company</span>
+                <span *ngIf="!registering">Registro Empresa</span>
+                <span *ngIf="registering">Registrando...</span>
+              </button>
+              <button type="button" class="ghost admin-register" [disabled]="registering" (click)="regForm.patchValue({role:'ADMIN'}); registerAdmin()">
+                <span *ngIf="!registering">Registro Admin</span>
                 <span *ngIf="registering">Registrando...</span>
               </button>
             </div>

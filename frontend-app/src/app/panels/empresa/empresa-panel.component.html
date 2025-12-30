@@ -19,7 +19,7 @@
         <button (click)="switchModule('catalog')" [class.active]="selectedModule==='catalog'">🎮 Gestión de juegos</button>
         <button (click)="switchModule('users')" [class.active]="selectedModule==='users'">🧑‍💼 Usuarios</button>
         <button (click)="switchModule('comments')" [class.active]="selectedModule==='comments'">💬 Comentarios</button>
-        <button (click)="switchModule('Analitica')" [class.active]="selectedModule==='analytics'">📊 Analytics</button>
+        <button (click)="switchModule('analytics')" [class.active]="selectedModule==='analytics'">📊 Analytics</button>
         <button (click)="switchModule('billing')" [class.active]="selectedModule==='billing'">🧾 Facturación</button>
         <button (click)="switchModule('settings')" [class.active]="selectedModule==='settings'">⚙️ Configuración</button>
       </nav>
@@ -34,7 +34,25 @@
       </div>
 
     <section *ngIf="selectedCompany && selectedModule==='catalog'">
-      <h3>Catálogo — {{selectedCompany.nombre}} <button class="small" (click)="createDemoGames()" [disabled]="creatingDemos" style="margin-left:0.6rem">{{ creatingDemos ? 'Creando...' : 'Insertar demos' }}</button></h3>
+      <h3 style="display:flex;align-items:center;gap:0.6rem">Catálogo — {{selectedCompany.nombre}} <button class="small" (click)="createDemoGames()" [disabled]="creatingDemos">{{ creatingDemos ? 'Creando...' : 'Insertar demos' }}</button></h3>
+      <div class="metrics-row" style="margin:0.6rem 0 1rem 0">
+        <div class="metric">
+          <div class="metric-title">Total juegos</div>
+          <div class="metric-value">{{metrics.totalGames}}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-title">Publicados</div>
+          <div class="metric-value">{{metrics.published}}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-title">Precio promedio</div>
+          <div class="metric-value">{{metrics.avgPrice | currency:'USD': 'symbol':'1.2-2'}}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-title">Ingreso estimado</div>
+          <div class="metric-value">{{metrics.estimatedRevenue | currency:'USD': 'symbol':'1.2-2'}}</div>
+        </div>
+      </div>
       <div *ngIf="catalog.length===0" class="muted">Sin juegos en el catálogo.</div>
       <div *ngFor="let group of groupedCatalog" class="category-group" style="margin-bottom:1rem">
         <h4 style="margin:0.4rem 0;padding:0.3rem 0.6rem;background:#f6f7fb;border-radius:6px">{{group.categoria}}</h4>
@@ -50,6 +68,7 @@
               <div style="display:flex;flex-direction:column;gap:0.4rem">
                 <button (click)="editGame(g)">Editar</button>
                 <button (click)="toggleSale(g)">{{g.for_sale ? 'Suspender' : 'Reactivar'}}</button>
+                <button (click)="sendToAdmin(g)">Mandar a admin para aprobación</button>
                 <button class="danger" (click)="removeGame(g)">Eliminar</button>
               </div>
             </div>
@@ -106,21 +125,75 @@
     </section>
 
     <section *ngIf="selectedCompany && selectedModule==='analytics'">
-      <h3>Analytics</h3>
-      <p class="muted">Ventas, descargas y rating promedio (pendiente de métricas)</p>
-      <div class="muted">Placeholder: implementar métricas en backend.</div>
+      <h3>Analytics — Resumen</h3>
+      <div class="metrics-row" style="margin:0.6rem 0 1rem 0">
+        <div class="metric">
+          <div class="metric-title">Total juegos</div>
+          <div class="metric-value">{{metrics.totalGames}}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-title">Publicados</div>
+          <div class="metric-value">{{metrics.published}}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-title">Precio promedio</div>
+          <div class="metric-value">{{metrics.avgPrice | currency:'USD': 'symbol':'1.2-2'}}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-title">Ingreso estimado</div>
+          <div class="metric-value">{{metrics.estimatedRevenue | currency:'USD': 'symbol':'1.2-2'}}</div>
+        </div>
+      </div>
+      <h4>Top categorías</h4>
+      <div *ngIf="groupedCatalog.length===0" class="muted">No hay datos de catálogo disponibles.</div>
+      <ul *ngIf="groupedCatalog.length>0" class="users-list">
+        <li *ngFor="let g of groupedCatalog"> <strong>{{g.categoria}}</strong> <span class="muted">({{g.items.length}} juegos)</span></li>
+      </ul>
+      <p class="small muted">Nota: métricas calculadas desde el catálogo cargado localmente; para métricas reales integra las APIs de ventas y compras.</p>
     </section>
 
     <section *ngIf="selectedCompany && selectedModule==='billing'">
       <h3>Facturación y comisiones</h3>
       <div class="muted">Comisiones: pendiente de integración con pagos.</div>
+
+      <div class="billing-actions" style="margin-top:0.6rem">
+        <p class="small muted">Reportes para dueños de empresa (PDF - JasperReports preferido):</p>
+        <div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center">
+          <button class="btn-report" title="Generar reporte de ventas (Jasper PDF si está disponible)" (click)="generateSalesReport()" [disabled]="reportLoading.ventas">{{ reportLoading.ventas ? 'Generando ventas…' : '📈 Reporte de Ventas (PDF)' }}</button>
+          <button class="btn-report" title="Generar reporte de feedback (calificaciones y comentarios)" (click)="generateFeedbackReport()" [disabled]="reportLoading.feedback">{{ reportLoading.feedback ? 'Generando feedback…' : '💬 Reporte de Feedback (PDF)' }}</button>
+          <button class="btn-report" title="Generar Top 5 juegos (por ventas)" (click)="generateTop5Report()" [disabled]="reportLoading.top5">{{ reportLoading.top5 ? 'Generando Top5…' : '🏆 Top 5 Juegos (PDF)' }}</button>
+        </div>
+
+        <div style="margin-top:0.6rem;display:flex;gap:0.6rem;align-items:center">
+          <small class="muted">Estado:</small>
+          <span class="badge" *ngIf="reportStatus.ventas==='ok-backend'">Ventas: PDF (backend)</span>
+          <span class="badge muted" *ngIf="reportStatus.ventas==='fallback-json'">Ventas: JSON (fallback)</span>
+          <span class="badge" *ngIf="reportStatus.feedback==='ok-backend'">Feedback: PDF (backend)</span>
+          <span class="badge muted" *ngIf="reportStatus.feedback==='fallback-json'">Feedback: JSON (fallback)</span>
+          <span class="badge" *ngIf="reportStatus.top5==='ok-backend'">Top5: PDF (backend)</span>
+          <span class="badge muted" *ngIf="reportStatus.top5==='fallback-json'">Top5: JSON (fallback)</span>
+        </div>
+        <p class="small muted" style="margin-top:0.4rem">Si el backend no responde se exportará un resumen local (JSON). Para obtener PDFs nítidos use la ruta JasperReports en el backend.</p>
+      </div>
     </section>
 
     <section *ngIf="selectedCompany && selectedModule==='settings'">
       <h3>Configuración de empresa</h3>
-      <p><strong>Nombre:</strong> {{selectedCompany.nombre}}</p>
-      <p><strong>Correo:</strong> {{selectedCompany.correo}}</p>
-      <p><strong>Teléfono:</strong> {{selectedCompany.telefono}}</p>
+
+      <div *ngIf="selectedCompany" class="company-settings">
+        <div class="mb-2"><strong>Nombre:</strong> {{selectedCompany.nombre || selectedCompany.name || selectedCompany.razon_social}}</div>
+        <div class="mb-2"><strong>ID:</strong> {{selectedCompany.id || selectedCompany.companyId || selectedCompany.public_id}}</div>
+        <div class="mb-2"><strong>Correo:</strong> {{ getLoggedUserEmail() || (selectedCompany.contact_email || selectedCompany.email || selectedCompany.correo) || 'N/A' }}</div>
+        <div class="mb-2"><strong>Fecha registro:</strong> {{ getCompanyCreationDate() || 'N/A' }}</div>
+        <div class="mb-2"><strong>Juegos publicados:</strong> {{ metrics.published }}</div>
+
+        <div class="mb-2">
+          <label class="form-check-label mr-2">Visible para gamers</label>
+          <input type="checkbox" class="form-check-input" [checked]="(selectedCompany.visible_to_gamers ?? selectedCompany.visible ?? false)" (change)="toggleCompanyVisibility()" />
+        </div>
+      </div>
+
+      <div *ngIf="!selectedCompany" class="muted">Seleccione una empresa para ver la configuración</div>
     </section>
   </main>
 </div>

@@ -86,7 +86,27 @@
         </configuration>
       </plugin>
 
+        <!-- Copy runtime dependencies into target/backend/WEB-INF/lib so java -cp can include them -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>3.5.0</version>
+          <executions>
+            <execution>
+              <id>copy-deps-to-webinf</id>
+              <phase>package</phase>
+              <goals>
+                <goal>copy-dependencies</goal>
+              </goals>
+              <configuration>
+                <outputDirectory>${project.build.directory}/backend/WEB-INF/lib</outputDirectory>
+                <includeScope>runtime</includeScope>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
     </plugins>
   </build>
 
 </project>
+

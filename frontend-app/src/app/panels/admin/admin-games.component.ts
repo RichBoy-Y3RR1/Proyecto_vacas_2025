@@ -14,16 +14,29 @@ interface Videojuego { id: number; nombre: string; descripcion?: string; precio?
     <h3>Gestión de Videojuegos</h3>
     <div *ngIf="loading">Cargando juegos...</div>
     <div *ngIf="!loading">
-      <div style="margin-bottom:1rem">
-        <label><input type="checkbox" [(ngModel)]="selectAll" (change)="toggleSelectAll()" /> Seleccionar todos</label>
-        <button (click)="approveSelected()" [disabled]="!anySelected()">Aprobar seleccionados</button>
-        <button (click)="transferSelected()" [disabled]="!anySelected()">Transferir seleccionados a Admin</button>
-        <button (click)="load()">Refrescar</button>
-        <button (click)="processTransferQueue()">Procesar cola de transferencias</button>
-      </div>
+        <div style="margin-bottom:1rem;display:flex;gap:8px;align-items:center">
+          <label style="margin-right:8px"><input type="checkbox" [(ngModel)]="selectAll" (change)="toggleSelectAll()" /> Seleccionar todos</label>
+          <label>Categoría:</label>
+          <select [(ngModel)]="filterCategory">
+            <option value="">(Todas)</option>
+            <option *ngFor="let c of categories" [value]="c.nombre">{{c.nombre}}</option>
+          </select>
+          <label>Empresa:</label>
+          <select [(ngModel)]="filterCompanyId">
+            <option value="">(Todas)</option>
+            <option *ngFor="let co of companies" [value]="co.id">{{co.nombre}}</option>
+          </select>
+          <button (click)="toggleSortByCategory()">Ordenar por Categoría</button>
+          <button class="btn btn-primary" (click)="approveSelected()" [disabled]="!anySelected()">Publicar a gamer (seleccionados)</button>
+          <button class="btn btn-primary" (click)="transferSelected()" [disabled]="!anySelected()">Transferir seleccionados a Admin</button>
+          <button class="btn btn-success" (click)="approveAll()">Aprobar todo (publicar a gamer)</button>
+          <button (click)="load()">Refrescar</button>
+          <button (click)="processTransferQueue()">Procesar cola de transferencias</button>
+        </div>
       <table class="table">
         <thead>
           <tr>
+            <th></th>
             <th>Id</th>
             <th>Nombre</th>
             <th>Empresa</th>
@@ -33,7 +46,7 @@ interface Videojuego { id: number; nombre: string; descripcion?: string; precio?
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let g of games">
+          <tr *ngFor="let g of getFilteredGames()">
             <td><input type="checkbox" [(ngModel)]="g.__selected" (change)="onSelectChange()" /></td>
             <td>{{g.id}}</td>
             <td>
@@ -49,10 +62,11 @@ interface Videojuego { id: number; nombre: string; descripcion?: string; precio?
               </select>
             </td>
             <td>{{g.estado || (g.for_sale? 'A la venta':'Suspendido')}}</td>
-            <td>
+              <td>
               <button (click)="saveCategory(g)">Guardar Cat.</button>
-              <button *ngIf="g.estado!=='PUBLICADO'" (click)="approve(g)">Aprobar</button>
-              <button *ngIf="g.id<0" (click)="transferToAdmin(g)">Enviar a Admin</button>
+              <button *ngIf="g.estado!=='PUBLICADO'" (click)="publishToGamers(g)">Publicar a gamer</button>
+              <button *ngIf="g.estado==='PUBLICADO'" (click)="suspendFromGamers(g)">Suspender a gamer</button>
+              <button *ngIf="g.empresa_id" (click)="sendToGamer(g)">Enviar a gamer</button>
               <button (click)="remove(g)">Eliminar</button>
             </td>
           </tr>
@@ -67,6 +81,9 @@ export class AdminGamesComponent implements OnInit{
   companies: any[] = [];
   loading = false;
   selectAll = false;
+  filterCategory = '';
+  filterCompanyId: any = '';
+  sortByCategory = false;
   constructor(private vsvc: VideojuegoService, private admin: AdminService, private emp: EmpresaService, private notify: NotificationService){}
   ngOnInit(){ this.load(); this.loadCategories(); this.loadCompanies(); }
   load(){
@@ -98,11 +115,36 @@ export class AdminGamesComponent implements OnInit{
       if(!this.categories.length){ const set = new Set(this.games.map(g=>g.categoria).filter(Boolean)); this.categories = Array.from(set).map(n=>({ nombre:n })); }
     }catch(e){ this.games = []; }
   }
+  getFilteredGames(){
+    let arr = (this.games||[]).slice();
+    if(this.filterCompanyId){ const id = Number(this.filterCompanyId); arr = arr.filter(g=> (g.empresa_id||null) === id); }
+    if(this.filterCategory){ arr = arr.filter(g=> (g.categoria||'') === this.filterCategory); }
+    if(this.sortByCategory){ arr.sort((a,b)=> (a.categoria||'').localeCompare(b.categoria||'')); }
+    return arr;
+  }
   companyName(id:any){ const f = this.companies.find(x=>x.id===id); return f? f.nombre : (id? 'Empresa '+id : 'N/A'); }
-  saveCategory(g:any){ if(g.id>0){ this.vsvc.update(g.id, { categoria: g.categoria }).subscribe(()=> alert('Categoría guardada')); } else { this.updateLocalGame(g); alert('Categoría guardada localmente'); } }
+  saveCategory(g:any){
+    if(!g) return;
+    if(g.id>0){
+      this.vsvc.update(g.id, { categoria: g.categoria }).subscribe(()=>{ this.ensureLocalCategoryExists(g.categoria); alert('Categoría guardada'); });
+    } else {
+      this.updateLocalGame(g);
+      this.ensureLocalCategoryExists(g.categoria);
+      alert('Categoría guardada localmente');
+    }
+  }
+  ensureLocalCategoryExists(nombre:string){ if(!nombre) return; try{ const key='local_categories'; const arr = JSON.parse(localStorage.getItem(key)||'[]') as any[]; const exists = arr.find(x=> x.nombre && x.nombre.toLowerCase() === nombre.toLowerCase()); if(!exists){ arr.push({ nombre }); localStorage.setItem(key, JSON.stringify(arr)); this.categories.push({ nombre }); } }catch(e){} }
   approve(g:any){ if(g.id>0){ this.vsvc.update(g.id, { estado: 'PUBLICADO' }).subscribe(()=>{ alert('Juego aprobado'); this.load(); }); } else { g.estado = 'PUBLICADO'; this.updateLocalGame(g); alert('Aprobado localmente'); } }
   transferToAdmin(g:any){
-    const payload = { nombre: g.nombre, descripcion: g.descripcion, precio: g.precio, url_imagen: g.url_imagen, categoria: g.categoria, empresa_id: null };
+    // if backend item -> update empresa_id to null (transfer ownership to admin)
+    if(g.id>0){
+      this.vsvc.update(g.id, { empresa_id: null }).pipe(
+        catchError(()=> { this.notify.error('No se pudo transferir al backend.'); return of(null); })
+      ).subscribe(()=>{ this.notify.success('Juego transferido a admin'); this.load(); });
+      return;
+    }
+    // local/demo item -> create in backend as admin-owned
+    const payload = { nombre: g.nombre, descripcion: g.descripcion, precio: g.precio, url_imagen: g.url_imagen, categoria: g.categoria, empresa_id: null, estado: g.estado || 'PUBLICADO' };
     this.vsvc.create(payload).pipe(
       catchError(()=> {
         try{ const key = 'admin_transfer_queue'; const q = JSON.parse(localStorage.getItem(key)||'[]'); q.push(payload); localStorage.setItem(key, JSON.stringify(q)); this.notify.error('No se pudo enviar al backend; transferencia encolada localmente.'); }catch(e){ this.notify.error('Fallo al encolar la transferencia.'); }
@@ -122,15 +164,26 @@ export class AdminGamesComponent implements OnInit{
   toggleSelectAll(){ this.games.forEach(g=> g.__selected = this.selectAll); }
   anySelected(){ return this.games.some(g=> g.__selected); }
   approveSelected(){ const toApprove = this.games.filter(g=> g.__selected); toApprove.forEach(g=> this.approve(g)); }
-  transferSelected(){ const toTransfer = this.games.filter(g=> g.__selected && g.id<0); // only local/demo ones
-    if(!toTransfer.length){ // allow transferring published backend ones too
-      // for backend items, transfer means nothing; warn
-      if(confirm('No hay demos seleccionados localmente. ¿Deseas intentar transferir los seleccionados al catálogo (si ya son backend se omitirá)?')){
-        const all = this.games.filter(g=> g.__selected);
-        all.forEach(g=> this.transferToAdmin(g));
-      }
-      return;
+  transferSelected(){ const selected = this.games.filter(g=> g.__selected); if(!selected.length) return; selected.forEach(g=> this.transferToAdmin(g)); }
+
+  publishToGamers(g:any){ if(g.id>0){ this.vsvc.toggleForSale(g.id, true).subscribe(()=>{ this.notify.success('Publicado a gamers'); this.load(); }, ()=> this.notify.error('No se pudo publicar') ); } else { g.estado='PUBLICADO'; this.updateLocalGame(g); this.notify.success('Publicado localmente'); } }
+  suspendFromGamers(g:any){ if(g.id>0){ this.vsvc.toggleForSale(g.id, false).subscribe(()=>{ this.notify.success('Suspendido para gamers'); this.load(); }, ()=> this.notify.error('No se pudo suspender') ); } else { g.estado='SUSPENDIDO'; this.updateLocalGame(g); this.notify.success('Suspendido localmente'); } }
+  approveAll(){ if(!confirm('¿Aprobar (publicar) todos los juegos pendientes?')) return; this.vsvc.approveAll().subscribe(()=>{ this.notify.success('Todos los juegos pendientes fueron publicados'); this.load(); }, ()=> this.notify.error('No se pudo aprobar todo')); }
+
+  sendToGamer(g:any){
+    // prompt admin for target usuario id
+    const val = prompt('ID del usuario destinatario (usuario_id) para enviar/gift el juego:');
+    if(!val) return;
+    const uid = Number(val);
+    if(!uid || uid<=0){ alert('usuario_id inválido'); return; }
+    if(g.id && g.id>0){
+      this.vsvc.sendToUser(g.id, uid).subscribe({ next: (res:any)=>{ this.notify.success('Juego enviado/gifted al usuario'); this.load(); }, error: (err:any)=>{ this.notify.error('No se pudo enviar al usuario: '+ (err?.error || err?.message || 'error')); } });
+    } else {
+      // local demo: create backend copy then call send
+      const payload = { nombre: g.nombre, descripcion: g.descripcion, precio: g.precio, url_imagen: g.url_imagen, categoria: g.categoria, empresa_id: null, estado: g.estado || 'PUBLICADO' };
+      this.vsvc.create(payload).pipe(catchError(()=> { this.notify.error('No se pudo crear juego en backend para enviar'); return of(null); })).subscribe((r:any)=>{ if(r && r.id){ this.vsvc.sendToUser(r.id, uid).subscribe(()=>{ this.notify.success('Juego enviado/gifted al usuario'); this.load(); }, ()=> this.notify.error('No se pudo enviar tras crear juego')); } else { this.notify.error('No se pudo crear el juego en backend'); } });
     }
-    toTransfer.forEach(g=> this.transferToAdmin(g));
   }
+
+  toggleSortByCategory(){ this.sortByCategory = !this.sortByCategory; }
 }

@@ -42,6 +42,7 @@ export class AuthComponent {
     this.auth.currentUser$.subscribe((u) => (this.user = u));
     // expose as dynamic property for backward compatibility with code paths that try lazy access
     (this as any).empresaSvc = this.empresaSvc;
+    // Note: local seeding can be invoked manually via the tester or dev console.
   }
   submitLogin() {
     if (this.loginForm.invalid) {
@@ -132,6 +133,16 @@ export class AuthComponent {
               this.message = 'Registrado localmente (offline)';
               this.registering = false;
               // already saved and considered logged-in by AuthService fallback
+              // create a local wallet entry for offline users so wallet UI shows a balance
+              try {
+                const key = 'local_wallets';
+                const current = JSON.parse(localStorage.getItem(key) || '[]');
+                const existing = (current || []).find((w:any) => w.usuario_id === r.id);
+                if (!existing) {
+                  current.push({ usuario_id: r.id, saldo: 0 });
+                  localStorage.setItem(key, JSON.stringify(current));
+                }
+              } catch (e) { /* ignore */ }
               this.router.navigate(['/gamer']);
               return;
             }
@@ -139,7 +150,7 @@ export class AuthComponent {
             const newId = r && r.id ? r.id : null;
             // create empty wallet for new user if id available (only when backend actually created user)
             if (newId && newId > 0) {
-              this.http.post('http://localhost:8081/backend/api/cartera', { usuario_id: newId, saldo: 0 }).subscribe({ next: ()=>{}, error: ()=>{} });
+              this.http.post('http://localhost:8080/backend/api/cartera', { usuario_id: newId, saldo: 0 }).pipe(catchError(()=>of(null))).subscribe({ next: ()=>{}, error: ()=>{} });
             }
             // If backend returned token on register, AuthService already saved it (see service tap)
             if (r && r.token) {
@@ -197,12 +208,10 @@ export class AuthComponent {
               // lazy load EmpresaService to avoid circular DI in some setups
               const svc = (this as any).empresaSvc as EmpresaService;
               if (svc) {
-                svc
-                  .createCompany({
-                    nombre: payload.name,
-                    correo: payload.email,
-                  })
-                  .subscribe({ next: () => {}, error: () => {} });
+                // if backend registration was local/offline, ensure a local company record exists
+                try {
+                  svc.createCompany({ nombre: payload.name, correo: payload.email }).subscribe({ next: () => {}, error: () => {} });
+                } catch(e) {}
               }
             } catch (_) {}
             this.registering = false;
@@ -222,6 +231,34 @@ export class AuthComponent {
             ? e.error.message
             : 'Error al registrar empresa';
       },
+    });
+  }
+
+  // Register an admin account and auto-login to admin panel
+  registerAdmin() {
+    if (this.registering) return;
+    const v = this.regForm.value;
+    if (!v.email || !v.password) {
+      this.message = 'Completa email y contraseña para admin';
+      return;
+    }
+    this.registering = true;
+    this.message = 'Registrando administrador...';
+    const payload = {
+      role: 'ADMIN',
+      email: String(v.email).toLowerCase(),
+      password: String(v.password),
+      nickname: v.nickname || 'admin'
+    };
+
+    this.auth.register(payload).subscribe({
+      next: (r:any) => {
+        this.registering = false;
+        this.message = 'Administrador registrado';
+        // try automatic login
+        this.auth.login(payload.email, payload.password).subscribe({ next: ()=>{ this.router.navigate(['/admin']); }, error: ()=>{ this.message = 'Registrado pero no se pudo iniciar sesión automáticamente'; } });
+      },
+      error: (e:any) => { this.registering = false; this.message = e && e.error && e.error.message ? e.error.message : 'Error al registrar admin'; }
     });
   }
 

@@ -1,2 +1,119 @@
-.gamer-panel { padding: 16px; }
-nav button { margin-right: 8px; }
+/* Contenedor Raíz: Ocupa toda la pantalla sin márgenes */
+.gamer-root {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f8f9fa; /* Fondo general blanco/gris claro */
+  color: #333;
+  margin: 0;
+  padding: 0;
+  align-items: stretch;
+}
+
+/* Sidebar: Pegado a la izquierda, alto total */
+.sidebar {
+  width: 280px;
+  padding: 40px 20px;
+  background-color: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+  margin: 0; /* Eliminado el margen que lo separaba del borde */
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.brand {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: #1a1a1a;
+}
+
+/* Botones del Sidebar */
+.sidebar nav button {
+  display: block;
+  width: 100%;
+  margin: 5px 0;
+  background: transparent;
+  border: none;
+  color: #555;
+  text-align: left;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.sidebar nav button.active {
+  background: #e7f0ff;
+  color: #1f6feb;
+  font-weight: 600;
+}
+
+/* Contenido Principal: Centrado y amplio */
+.content {
+  flex: 1;
+  padding: 40px;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centra el contenido internamente */
+}
+
+/* Título de la sección */
+.content h1 {
+  width: 100%;
+  max-width: 1200px; /* Limita el ancho para que no se estire demasiado en monitores ultra wide */
+  font-size: 32px;
+  margin-bottom: 30px;
+  color: #1a1a1a;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* Grid de Juegos: Centrado y ordenado */
+.grid {
+  display: grid;
+  width: 100%;
+  max-width: 1200px; /* Asegura que los juegos estén agrupados al centro */
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 30px;
+  justify-content: center;
+}
+
+/* Tarjetas de Juegos */
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eee;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+/* Botones de acción */
+.actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actions .btn-buy {
+  background: #1f6feb;
+  color: white;
+  border: none;
+}

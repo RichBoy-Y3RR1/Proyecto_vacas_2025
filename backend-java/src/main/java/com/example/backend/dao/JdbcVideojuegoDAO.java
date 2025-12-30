@@ -42,7 +42,8 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
             // use empresaId from payload when provided, otherwise default to 1
             ps.setInt(3, data.getEmpresaId() != null ? data.getEmpresaId() : 1);
             ps.setBigDecimal(4, data.getPrecio() != null ? data.getPrecio() : new java.math.BigDecimal("0"));
-            ps.setString(5, "PUBLICADO");
+            // New flows: games submitted by companies are PENDIENTE until admin approves
+            ps.setString(5, data.getEstado() != null ? data.getEstado() : "PENDIENTE");
             ps.setString(6, data.getEdad_clasificacion());
             ps.setString(7, data.getUrl_imagen());
             ps.setString(8, data.getCategoria());
@@ -70,6 +71,14 @@ public class JdbcVideojuegoDAO implements VideojuegoDAO {
         try (Connection conn = DBConnection.getConnection()){
             PreparedStatement ps = conn.prepareStatement("UPDATE Videojuego SET estado = ? WHERE id = ?");
             ps.setString(1, forSale ? "PUBLICADO" : "SUSPENDIDO"); ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    @Override
+    public boolean approveAllPending() throws Exception {
+        try (Connection conn = DBConnection.getConnection()){
+            PreparedStatement ps = conn.prepareStatement("UPDATE Videojuego SET estado = 'PUBLICADO' WHERE estado = 'PENDIENTE'");
             return ps.executeUpdate() > 0;
         }
     }

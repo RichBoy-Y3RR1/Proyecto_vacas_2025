@@ -20,5 +20,8 @@ export class VideojuegoService {
   update(id:number, payload:any){ return this.http.put(`${this.base}/${id}`, payload); }
   toggleForSale(id:number, forSale:boolean){ return this.http.patch(`${this.base}/${id}`, { for_sale: forSale }); }
   delete(id:number){ return this.http.delete(`${this.base}/${id}`); }
+  approveAll(){ return this.http.post(`${this.base}/approve-all`, {}); }
+  // admin: send/gift a game to a user (creates a zero-cost compra)
+  sendToUser(id:number, usuarioId:number){ return this.http.post(`${this.base}/${id}/send`, { usuario_id: usuarioId }); }
 }
 

@@ -9,14 +9,17 @@
   <h1>Tienda Videojuegos - Backend</h1>
   <p>Este WAR puede servir el frontend compilado en <code>/browser</code>.</p>
   <h2>Endpoints disponibles — Interfaz de prueba</h2>
-  <p>La interfaz siguiente intenta llamar los endpoints relativos al contexto donde se sirve esta página.
-  Si su WAR se sirve en <code>/backend</code> la URL base será <code>http://localhost:8080/backend</code>.</p>
+  <p>
+ <code>/backend</code> la URL base será <code>http://localhost:8080/backend</code>.</p>
 
   <div style="display:flex;gap:20px;align-items:flex-start;">
     <div style="flex:1;min-width:360px">
       <label><strong>Context (detectado)</strong>: <span id="ctxSpan"></span></label>
       <div style="margin-top:8px">
         <label>Token (opcional): <input id="tokenInput" style="width:100%" placeholder="pegar token JWT aquí"></label>
+      </div>
+      <div style="margin-top:8px">
+        <label><input type="checkbox" id="mockAuthCheckbox"> Usar autenticación local (mock) — permite entrar como admin sin backend</label>
       </div>
 
       <div style="margin-top:12px">
@@ -36,7 +39,18 @@
       <div style="margin-top:8px;display:flex;gap:8px">
         <button id="callBtn">Llamar endpoint</button>
         <button id="fillExampleBtn">Auto-fill ejemplo</button>
+        <button id="seedLocalBtn" title="Crea usuarios de prueba en localStorage">Seed local users</button>
         <a id="openapiLink" style="margin-left:auto;align-self:center">OpenAPI</a>
+      </div>
+      <div style="margin-top:12px;border-top:1px dashed #ddd;padding-top:8px">
+        <strong>Admin Mock Panel</strong>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <button id="showLocalUsersBtn">Mostrar usuarios locales</button>
+          <button id="createAdminBtn">Crear admin local (admin@tienda.com/admin123)</button>
+          <button id="promoteBtn">Promover user@cliente.com a ADMIN</button>
+          <button id="clearLocalBtn">Borrar usuarios locales</button>
+        </div>
+        <pre id="adminResult" style="background:#f9f9f9;border:1px solid #eee;padding:8px;margin-top:8px;max-height:220px;overflow:auto"></pre>
       </div>
     </div>
 
@@ -125,7 +139,18 @@
       const statusSpan = document.getElementById('statusSpan');
       const pre = document.getElementById('resultPre');
       statusSpan.textContent = '...' ; pre.textContent = 'Pinging ' + url + ' ...';
+      // If mock auth enabled and this is a login call, handle locally
       try{
+        const mockEnabled = document.getElementById('mockAuthCheckbox').checked;
+        if (mockEnabled && ep.path === '/api/auth/login' && (ep.method === 'POST')){
+          let bodyObj = {};
+          try { bodyObj = opts.body ? JSON.parse(opts.body) : {}; } catch(e){}
+          const mock = handleMockLogin(bodyObj);
+          statusSpan.textContent = mock.status + ' ' + (mock.status===200? 'OK':'ERROR');
+          pre.textContent = JSON.stringify(mock.body, null, 2);
+          return;
+        }
+
         const res = await fetch(url, opts);
         statusSpan.textContent = res.status + ' ' + res.statusText;
         const ct = res.headers.get('content-type') || '';
@@ -143,6 +168,62 @@
         pre.textContent = 'Error al llamar endpoint:\n' + err.toString();
       }
     });
+
+    // seed local users into localStorage for mock auth
+    document.getElementById('seedLocalBtn').addEventListener('click', ()=>{
+      seedLocalUsers();
+      alert('Usuarios locales creados: admin@tienda.com/admin123, empresa@acme.com/empresa123, user@cliente.com/user123');
+    });
+
+    // Admin Mock Panel handlers
+    document.getElementById('showLocalUsersBtn').addEventListener('click', ()=>{
+      const out = document.getElementById('adminResult');
+      const users = JSON.parse(localStorage.getItem('local_users') || '[]');
+      out.textContent = JSON.stringify(users, null, 2);
+    });
+    document.getElementById('createAdminBtn').addEventListener('click', ()=>{
+      const out = document.getElementById('adminResult');
+      seedLocalUsers();
+      // ensure admin exists
+      const users = JSON.parse(localStorage.getItem('local_users') || '[]');
+      const adm = users.find(u=>u.email==='admin@tienda.com');
+      if(!adm){ users.push({id:Date.now(), email:'admin@tienda.com', password:'admin123', role:'ADMIN', nickname:'admin'}); localStorage.setItem('local_users', JSON.stringify(users)); out.textContent='Admin creado.'; }
+      else out.textContent='Admin ya existe.';
+    });
+    document.getElementById('promoteBtn').addEventListener('click', ()=>{
+      const out = document.getElementById('adminResult');
+      const users = JSON.parse(localStorage.getItem('local_users') || '[]');
+      const target = users.find(u=>u.email==='user@cliente.com' || u.email==='gamer@example.com');
+      if(!target){ out.textContent='Usuario objetivo no encontrado. Ejecuta "Seed local users" primero.'; return; }
+      target.role='ADMIN';
+      localStorage.setItem('local_users', JSON.stringify(users));
+      out.textContent = 'Usuario promovido a ADMIN:\n' + JSON.stringify(target, null, 2);
+    });
+    document.getElementById('clearLocalBtn').addEventListener('click', ()=>{
+      localStorage.removeItem('local_users'); localStorage.removeItem('local_companies'); document.getElementById('adminResult').textContent='Local users cleared';
+    });
+
+    function seedLocalUsers(){
+      const users = [
+        {id:1,email:'admin@tienda.com',password:'admin123',role:'ADMIN',nickname:'admin'},
+        {id:2,email:'empresa@acme.com',password:'empresa123',role:'EMPRESA',nickname:'acme_user',empresaId:1},
+        {id:3,email:'user@cliente.com',password:'user123',role:'USUARIO',nickname:'gamer123'}
+      ];
+      localStorage.setItem('mock_users', JSON.stringify(users));
+    }
+
+    function handleMockLogin(body){
+      const users = JSON.parse(localStorage.getItem('mock_users') || '[]');
+      const email = (body.email || '').toLowerCase().trim();
+      const password = body.password || '';
+      const found = users.find(u => u.email.toLowerCase() === email);
+      if (!found) return { status:401, body:{ error:'invalid', message:'usuario no encontrado (mock)' } };
+      if (found.password !== password) return { status:401, body:{ error:'invalid', message:'contraseña incorrecta (mock)' } };
+      const token = 'mock-token-'+found.id+'-'+Date.now();
+      const userMap = { id: found.id, email: found.email, role: found.role };
+      if (found.empresaId) { userMap.companyId = found.empresaId; userMap.empresaId = found.empresaId; userMap.empresa_id = found.empresaId; }
+      return { status:200, body: { token: token, user: userMap } };
+    }
   </script>
 
 </body>

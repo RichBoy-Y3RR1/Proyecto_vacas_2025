@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AdminService } from '../../services/admin.service';
+import { VideojuegoService } from '../../videojuegos/videojuego.service';
 import { NotificationService } from '../../services/notification.service';
 import { catchError, finalize } from 'rxjs/operators';
 import { of } from 'rxjs';
@@ -28,7 +29,8 @@ export class AdminCategoriesComponent implements OnInit{
   categorias: Categoria[] = [];
   nuevoNombre=''; nuevoDesc='';
   loading = false;
-  constructor(private admin: AdminService, private notify: NotificationService){}
+  games: any[] = [];
+  constructor(private admin: AdminService, private notify: NotificationService, private vsvc: VideojuegoService){}
   ngOnInit(){ this.load(); }
   load(){
     this.loading = true;
@@ -36,8 +38,13 @@ export class AdminCategoriesComponent implements OnInit{
       catchError(()=> { this.notify.error('No se pudieron cargar categorías.'); return of([]); }),
       finalize(()=> this.loading = false)
     ).subscribe(r=> this.categorias = r || []);
+    // also load games to prevent deleting categories in use
+    try{ this.vsvc.getAll().subscribe({ next: g=> this.games = g || [], error: ()=> this.games = [] }); }catch(e){ this.games = []; }
   }
   crear(){ if(!this.nuevoNombre) return; this.loading = true;
+    // prevent duplicate names (case-insensitive)
+    const exists = this.categorias.find(c=> c.nombre?.toLowerCase() === this.nuevoNombre.toLowerCase());
+    if(exists){ this.notify.error('Ya existe una categoría con ese nombre'); this.loading=false; return; }
     const payload = { nombre:this.nuevoNombre, descripcion:this.nuevoDesc };
     this.admin.createCategory(payload).pipe(
       catchError(()=> { // persist locally
@@ -48,12 +55,18 @@ export class AdminCategoriesComponent implements OnInit{
     ).subscribe(()=> this.notify.success('Categoría creada'));
   }
   guardar(c: Categoria){ if(!c?.id) return; this.loading = true;
+    // prevent duplicate names on update
+    const dup = this.categorias.find(x=> x.id!==c.id && x.nombre?.toLowerCase() === c.nombre?.toLowerCase());
+    if(dup){ this.notify.error('Otro registro ya tiene ese nombre'); this.loading=false; return; }
     this.admin.updateCategory(c.id!, { nombre:c.nombre, descripcion:c.descripcion }).pipe(
       catchError(()=> { this.notify.error('No se pudo actualizar categoría'); return of(null); }),
       finalize(()=> this.loading=false)
     ).subscribe(()=>{ this.notify.success('Categoría actualizada'); const idx = this.categorias.findIndex(x=> x.id===c.id); if(idx>=0) this.categorias[idx] = c; });
   }
   async eliminar(c: Categoria){ if(!c?.id){ this.notify.error('Categoría inválida'); return; } if(!await this.notify.confirm('Eliminar categoría?')) return; this.loading = true;
+    // prevent delete if any active game uses this category
+    const inUse = (this.games||[]).some(g=> g.categoria && g.categoria === c.nombre && (g.for_sale || g.estado==='PUBLICADO'));
+    if(inUse){ this.notify.error('No se puede eliminar: existen juegos activos asignados a esta categoría'); this.loading=false; return; }
     this.admin.deleteCategory(c.id!).pipe(
       catchError(()=> { this.notify.error('No se pudo eliminar categoría del backend.'); return of(null); }),
       finalize(()=> this.loading=false)

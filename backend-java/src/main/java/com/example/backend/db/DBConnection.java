@@ -5,6 +5,12 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class DBConnection {
       
@@ -14,25 +20,53 @@ public class DBConnection {
         private static final String PASS = System.getenv().getOrDefault("DB_PASS","tu_password");
 
     public static Connection getConnection() throws SQLException {
-        // Try configured DB (MySQL) first. If it fails or env is not set, fallback to an embedded H2 DB
-        try {
-            Connection conn = DriverManager.getConnection(URL, USER, PASS);
-            try { ensureSeedUsers(conn); } catch(Exception ex){ System.err.println("Failed to ensure seed users: " + ex.getMessage()); }
-            return conn;
-        } catch (Exception e) {
-            System.err.println("MySQL connection failed, falling back to embedded H2: " + e.getMessage());
+        // Try configured DB (MySQL) first only if DB_URL was explicitly set in environment
+        String envDbUrl = System.getenv("DB_URL");
+        if (envDbUrl != null && !envDbUrl.isEmpty()){
             try {
-                // H2 in file mode inside project folder so data persists between runs
-                String h2Url = System.getenv().getOrDefault("H2_URL", "jdbc:h2:./data/tienda;MODE=MySQL;AUTO_SERVER=TRUE;LOCK_MODE=3");
-                String h2User = System.getenv().getOrDefault("H2_USER", "sa");
-                String h2Pass = System.getenv().getOrDefault("H2_PASS", "");
-                Connection h2 = DriverManager.getConnection(h2Url, h2User, h2Pass);
-                ensureH2Schema(h2);
-                try { ensureSeedUsers(h2); } catch(Exception ex){ System.err.println("Failed to ensure seed users on H2: " + ex.getMessage()); }
-                return h2;
-            } catch (Exception ex2) {
-                throw new SQLException("Unable to obtain database connection (MySQL and H2 failed): " + ex2.getMessage(), ex2);
+                Connection conn = DriverManager.getConnection(URL, USER, PASS);
+                try { ensureSeedUsers(conn); } catch(Exception ex){ System.err.println("Failed to ensure seed users: " + ex.getMessage()); }
+                return conn;
+            } catch (Exception e) {
+                System.err.println("MySQL connection failed, falling back to embedded H2: " + e.getMessage());
             }
+        } else {
+            // No external DB configured — skip noisy MySQL attempts
+            System.out.println("No DB_URL configured; using embedded H2 by default.");
+        }
+
+        // Attempt H2, and if it fails due to an incompatible MVStore file, back it up and retry once
+        String h2Url = System.getenv().getOrDefault("H2_URL", "jdbc:h2:./data/tienda;MODE=MySQL;AUTO_SERVER=TRUE;LOCK_MODE=3");
+        String h2User = System.getenv().getOrDefault("H2_USER", "sa");
+        String h2Pass = System.getenv().getOrDefault("H2_PASS", "");
+
+        try {
+            Connection h2 = DriverManager.getConnection(h2Url, h2User, h2Pass);
+            ensureH2Schema(h2);
+            try { ensureSeedUsers(h2); } catch(Exception ex){ System.err.println("Failed to ensure seed users on H2: " + ex.getMessage()); }
+            return h2;
+        } catch (Exception ex2) {
+            // If a data file exists and caused the failure, back it up and try again
+            try {
+                Path mv = Paths.get("data", "tienda.mv.db");
+                Path trace = Paths.get("data", "tienda.trace.db");
+                if (Files.exists(mv) || Files.exists(trace)){
+                    String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                    Path bakDir = Paths.get("data", "backup_" + stamp);
+                    Files.createDirectories(bakDir);
+                    if (Files.exists(mv)) Files.move(mv, bakDir.resolve(mv.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+                    if (Files.exists(trace)) Files.move(trace, bakDir.resolve(trace.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+                    System.err.println("Backed up H2 files to " + bakDir.toString() + " after connection failure: " + ex2.getMessage());
+                    // retry connection once
+                    Connection h2b = DriverManager.getConnection(h2Url, h2User, h2Pass);
+                    ensureH2Schema(h2b);
+                    try { ensureSeedUsers(h2b); } catch(Exception ex){ System.err.println("Failed to ensure seed users on H2 after backup: " + ex.getMessage()); }
+                    return h2b;
+                }
+            } catch (Exception bx) {
+                System.err.println("Failed to backup H2 files: " + bx.getMessage());
+            }
+            throw new SQLException("Unable to obtain database connection (MySQL and H2 failed): " + ex2.getMessage(), ex2);
         }
     }
 
@@ -60,6 +94,13 @@ public class DBConnection {
             // Ensure Videojuego table has url_imagen and categoria columns (safe to run on MySQL/H2)
             try { st.execute("ALTER TABLE Videojuego ADD COLUMN url_imagen VARCHAR(500)"); } catch(Exception ex) { /* ignore if exists */ }
             try { st.execute("ALTER TABLE Videojuego ADD COLUMN categoria VARCHAR(100)"); } catch(Exception ex) { /* ignore if exists */ }
+            // Ensure Empresa has optional public_id for frontend convenience
+            try { st.execute("ALTER TABLE Empresa ADD COLUMN public_id INT NULL"); } catch(Exception ex) { /* ignore if exists */ }
+            // Ensure commission tables exist for purchase fee calculations
+            try { st.execute("CREATE TABLE IF NOT EXISTS Comision_Global (id INT PRIMARY KEY, percent DECIMAL(5,2) NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"); } catch(Exception ex) { }
+            try { st.execute("CREATE TABLE IF NOT EXISTS Comision_Empresa (empresa_id INT PRIMARY KEY, percent DECIMAL(5,2) NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"); } catch(Exception ex) { }
+            try { st.execute("INSERT INTO Comision_Global (id, percent) SELECT 1, 15.00 WHERE NOT EXISTS (SELECT 1 FROM Comision_Global)"); } catch(Exception ex) { }
+            try { st.execute("INSERT INTO Comision_Empresa (empresa_id, percent) SELECT 1, 12.50 WHERE NOT EXISTS (SELECT 1 FROM Comision_Empresa WHERE empresa_id=1)"); } catch(Exception ex) { }
             // Seed demo videojuegos if not present
             try { st.execute("INSERT INTO Videojuego (nombre, descripcion, empresa_id, precio, estado, fecha_lanzamiento, edad_clasificacion, url_imagen, categoria) SELECT 'Mario Strikers', 'Mario Strikers es un juego de fútbol arcade con power-ups y acción multijugador.', 1, 19.99, 'PUBLICADO', '2021-07-01', 'E', '/assets/ore/mario_strikers.jpg', 'Deportes' WHERE NOT EXISTS (SELECT 1 FROM Videojuego WHERE nombre='Mario Strikers')"); } catch(Exception ex){ }
             try { st.execute("INSERT INTO Videojuego (nombre, descripcion, empresa_id, precio, estado, fecha_lanzamiento, edad_clasificacion, url_imagen, categoria) SELECT 'Demo Racer X', 'Carreras arcade con pistas dinámicas y potenciadores.', 1, 9.99, 'PUBLICADO', '2020-05-10', 'E', '/assets/ore/demo_racer.jpg', 'Carreras' WHERE NOT EXISTS (SELECT 1 FROM Videojuego WHERE nombre='Demo Racer X')"); } catch(Exception ex){ }
@@ -71,33 +112,31 @@ public class DBConnection {
 
     private static void ensureH2Schema(Connection conn) {
         try (Statement st = conn.createStatement()){
+            // If core table exists, assume schema present and skip heavy schema operations
+            try (ResultSet rsCheck = st.executeQuery("SELECT COUNT(*) AS c FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='USUARIO'")){
+                if (rsCheck.next() && rsCheck.getInt("c")>0){
+                    System.out.println("ensureH2Schema: schema already present, skipping creation");
+                    return;
+                }
+            } catch(Exception ex){ /* ignore and continue with schema creation */ }
             // Create full schema and seed data to match the provided MySQL schema for local testing
-            st.execute("DROP TABLE IF EXISTS Videojuego_Categoria");
-            st.execute("DROP TABLE IF EXISTS Compra");
-            st.execute("DROP TABLE IF EXISTS Comentario");
-            st.execute("DROP TABLE IF EXISTS Cartera");
-            st.execute("DROP TABLE IF EXISTS Grupo_Usuario");
-            st.execute("DROP TABLE IF EXISTS Grupo_Familiar");
-            st.execute("DROP TABLE IF EXISTS Comision_Empresa");
-            st.execute("DROP TABLE IF EXISTS Comision_Global");
-            st.execute("DROP TABLE IF EXISTS Videojuego");
-            st.execute("DROP TABLE IF EXISTS Categoria");
-            st.execute("DROP TABLE IF EXISTS Usuario");
-            st.execute("DROP TABLE IF EXISTS Empresa");
+            // (we skip DROP TABLE operations to avoid dependency-related errors on H2)
 
-            st.execute("CREATE TABLE Categoria (id_categoria INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(100) NOT NULL UNIQUE, descripcion TEXT, fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP)");
-            st.execute("CREATE TABLE Empresa (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(150) NOT NULL, correo VARCHAR(150) UNIQUE, telefono VARCHAR(50), estado VARCHAR(20) NOT NULL)");
-            st.execute("CREATE TABLE Usuario (id INT AUTO_INCREMENT PRIMARY KEY, correo VARCHAR(150) NOT NULL UNIQUE, password VARCHAR(255) NOT NULL, role VARCHAR(20) NOT NULL, estado VARCHAR(20) NOT NULL, nickname VARCHAR(100), fecha_nacimiento DATE, telefono VARCHAR(50), pais VARCHAR(100), empresa_id INT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
-            st.execute("CREATE TABLE Videojuego (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(150) NOT NULL, descripcion TEXT, empresa_id INT NOT NULL, precio DECIMAL(10,2) DEFAULT 0, estado VARCHAR(30) DEFAULT 'REGISTRADO', fecha_lanzamiento DATE, edad_clasificacion VARCHAR(10), url_imagen VARCHAR(500), categoria VARCHAR(100), FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE CASCADE)");
-            st.execute("CREATE TABLE Videojuego_Categoria (videojuego_id INT NOT NULL, categoria_id INT NOT NULL, PRIMARY KEY (videojuego_id, categoria_id), FOREIGN KEY (videojuego_id) REFERENCES Videojuego(id) ON DELETE CASCADE, FOREIGN KEY (categoria_id) REFERENCES Categoria(id_categoria) ON DELETE CASCADE)");
-            st.execute("CREATE TABLE Compra (id INT AUTO_INCREMENT PRIMARY KEY, usuario_id INT NOT NULL, videojuego_id INT NOT NULL, fecha DATETIME DEFAULT CURRENT_TIMESTAMP, total DECIMAL(10,2), platform_commission DECIMAL(12,4), company_amount DECIMAL(12,4), FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE, FOREIGN KEY (videojuego_id) REFERENCES Videojuego(id) ON DELETE CASCADE)");
-            st.execute("CREATE TABLE Comentario (id INT AUTO_INCREMENT PRIMARY KEY, usuario_id INT NOT NULL, videojuego_id INT NOT NULL, texto TEXT, puntuacion INT, fecha DATETIME DEFAULT CURRENT_TIMESTAMP, visible BOOLEAN DEFAULT TRUE, FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE, FOREIGN KEY (videojuego_id) REFERENCES Videojuego(id) ON DELETE CASCADE)");
-            st.execute("CREATE TABLE Cartera (id INT AUTO_INCREMENT PRIMARY KEY, usuario_id INT NOT NULL, saldo DECIMAL(12,2) DEFAULT 0, FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE)");
-            st.execute("CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP)");
-            st.execute("CREATE TABLE Grupo_Familiar (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(150), owner_id INT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (owner_id) REFERENCES Usuario(id) ON DELETE CASCADE)");
-            st.execute("CREATE TABLE Grupo_Usuario (grupo_id INT NOT NULL, usuario_id INT NOT NULL, PRIMARY KEY (grupo_id, usuario_id), FOREIGN KEY (grupo_id) REFERENCES Grupo_Familiar(id) ON DELETE CASCADE, FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE)");
-            st.execute("CREATE TABLE Comision_Global (id INT PRIMARY KEY, percent DECIMAL(5,2) NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
-            st.execute("CREATE TABLE Comision_Empresa (empresa_id INT PRIMARY KEY, percent DECIMAL(5,2) NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (empresa_id) REFERENCES Empresa(id))");
+            try { st.execute("CREATE TABLE Categoria (id_categoria INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(100) NOT NULL UNIQUE, descripcion TEXT, fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Empresa (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(150) NOT NULL, correo VARCHAR(150) UNIQUE, telefono VARCHAR(50), estado VARCHAR(20) NOT NULL)"); } catch(Exception ex){ }
+            // add optional public_id column for exposing a public identifier (can be used by frontend)
+            try { st.execute("ALTER TABLE Empresa ADD COLUMN public_id INT NULL"); } catch(Exception ex) { /* ignore if exists */ }
+            try { st.execute("CREATE TABLE Usuario (id INT AUTO_INCREMENT PRIMARY KEY, correo VARCHAR(150) NOT NULL UNIQUE, password VARCHAR(255) NOT NULL, role VARCHAR(20) NOT NULL, estado VARCHAR(20) NOT NULL, nickname VARCHAR(100), fecha_nacimiento DATE, telefono VARCHAR(50), pais VARCHAR(100), empresa_id INT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Videojuego (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(150) NOT NULL, descripcion TEXT, empresa_id INT NOT NULL, precio DECIMAL(10,2) DEFAULT 0, estado VARCHAR(30) DEFAULT 'REGISTRADO', fecha_lanzamiento DATE, edad_clasificacion VARCHAR(10), url_imagen VARCHAR(500), categoria VARCHAR(100), FOREIGN KEY (empresa_id) REFERENCES Empresa(id) ON DELETE CASCADE)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Videojuego_Categoria (videojuego_id INT NOT NULL, categoria_id INT NOT NULL, PRIMARY KEY (videojuego_id, categoria_id), FOREIGN KEY (videojuego_id) REFERENCES Videojuego(id) ON DELETE CASCADE, FOREIGN KEY (categoria_id) REFERENCES Categoria(id_categoria) ON DELETE CASCADE)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Compra (id INT AUTO_INCREMENT PRIMARY KEY, usuario_id INT NOT NULL, videojuego_id INT NOT NULL, fecha DATETIME DEFAULT CURRENT_TIMESTAMP, total DECIMAL(10,2), platform_commission DECIMAL(12,4), company_amount DECIMAL(12,4), FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE, FOREIGN KEY (videojuego_id) REFERENCES Videojuego(id) ON DELETE CASCADE)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Comentario (id INT AUTO_INCREMENT PRIMARY KEY, usuario_id INT NOT NULL, videojuego_id INT NOT NULL, texto TEXT, puntuacion INT, fecha DATETIME DEFAULT CURRENT_TIMESTAMP, visible BOOLEAN DEFAULT TRUE, FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE, FOREIGN KEY (videojuego_id) REFERENCES Videojuego(id) ON DELETE CASCADE)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Cartera (id INT AUTO_INCREMENT PRIMARY KEY, usuario_id INT NOT NULL, saldo DECIMAL(12,2) DEFAULT 0, FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Banner (id INT AUTO_INCREMENT PRIMARY KEY, url_imagen VARCHAR(255), fecha_inicio TIMESTAMP, fecha_fin TIMESTAMP)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Grupo_Familiar (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(150), owner_id INT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (owner_id) REFERENCES Usuario(id) ON DELETE CASCADE)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Grupo_Usuario (grupo_id INT NOT NULL, usuario_id INT NOT NULL, PRIMARY KEY (grupo_id, usuario_id), FOREIGN KEY (grupo_id) REFERENCES Grupo_Familiar(id) ON DELETE CASCADE, FOREIGN KEY (usuario_id) REFERENCES Usuario(id) ON DELETE CASCADE)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Comision_Global (id INT PRIMARY KEY, percent DECIMAL(5,2) NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"); } catch(Exception ex){ }
+            try { st.execute("CREATE TABLE Comision_Empresa (empresa_id INT PRIMARY KEY, percent DECIMAL(5,2) NOT NULL, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (empresa_id) REFERENCES Empresa(id))"); } catch(Exception ex){ }
 
             // Seed initial data
             st.execute("INSERT INTO Empresa (id, nombre, correo, telefono, estado) VALUES (1, 'Acme Games', 'contact@acmegames.com', '+123456', 'ACTIVA'), (2, 'PixelSoft', 'hello@pixelsoft.com', '+987654', 'ACTIVA')");
@@ -115,6 +154,8 @@ public class DBConnection {
             st.execute("INSERT INTO Banner (id, url_imagen, fecha_inicio, fecha_fin) VALUES (1, '/assets/banners/banner1.jpg', CURRENT_TIMESTAMP(), DATEADD('DAY', 30, CURRENT_TIMESTAMP()))");
             st.execute("INSERT INTO Comision_Global (id, percent) VALUES (1, 15.00)");
             st.execute("INSERT INTO Comision_Empresa (empresa_id, percent) VALUES (1, 12.50)");
+            // ensure seeded company 'empresa@acme.com' has a public_id for frontend convenience
+            try { st.execute("UPDATE Empresa SET public_id = 123 WHERE correo = 'empresa@acme.com' AND (public_id IS NULL OR public_id = 0)"); } catch(Exception ex) { /* ignore */ }
             st.execute("CREATE INDEX IF NOT EXISTS idx_videojuego_nombre ON Videojuego(nombre)");
             st.execute("CREATE INDEX IF NOT EXISTS idx_compra_fecha ON Compra(fecha)");
         } catch (Exception ex){

@@ -28,7 +28,7 @@ public class EmpresaHandler implements HttpHandler {
             if ("GET".equalsIgnoreCase(method) && path.endsWith(suffix)){
                 var rs = conn.createStatement().executeQuery("SELECT id, nombre, correo, telefono, estado FROM Empresa");
                 java.util.List<java.util.Map<String,Object>> list = new java.util.ArrayList<>();
-                while (rs.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rs.getInt("id")); m.put("nombre", rs.getString("nombre")); m.put("correo", rs.getString("correo")); m.put("telefono", rs.getString("telefono")); m.put("estado", rs.getString("estado")); list.add(m); }
+                while (rs.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rs.getInt("id")); m.put("publicId", rs.getObject("public_id") == null ? null : rs.getInt("public_id")); m.put("nombre", rs.getString("nombre")); m.put("correo", rs.getString("correo")); m.put("telefono", rs.getString("telefono")); m.put("estado", rs.getString("estado")); list.add(m); }
                 write(ex,200,gson.toJson(list)); return;
             }
 
@@ -38,6 +38,7 @@ public class EmpresaHandler implements HttpHandler {
                 String nombre = (String) body.get("nombre"); String correo = (String) body.getOrDefault("correo", null); String telefono = (String) body.getOrDefault("telefono", null); String estado = (String) body.getOrDefault("estado", "ACTIVA");
                 var ps = conn.prepareStatement("INSERT INTO Empresa (nombre, correo, telefono, estado) VALUES (?,?,?,?)", java.sql.PreparedStatement.RETURN_GENERATED_KEYS);
                 ps.setString(1,nombre); ps.setString(2,correo); ps.setString(3,telefono); ps.setString(4,estado); ps.executeUpdate(); var rs = ps.getGeneratedKeys(); Integer id = null; if (rs.next()) id = rs.getInt(1);
+                // (no implicit commission seeding here — revert to previous behavior)
                 // optional initial user
                 try {
                     Object iu = body.get("initialUser");
@@ -50,7 +51,7 @@ public class EmpresaHandler implements HttpHandler {
             if ("GET".equalsIgnoreCase(method) && path.contains(suffix + "/")){
                 String idStr = path.substring(path.lastIndexOf('/')+1).split("/")[0]; Integer id = Integer.parseInt(idStr);
                 var ps2 = conn.prepareStatement("SELECT id, nombre, correo, telefono, estado FROM Empresa WHERE id = ?"); ps2.setInt(1,id); var rs2 = ps2.executeQuery(); if (!rs2.next()){ write(ex,404,gson.toJson(java.util.Map.of("error","not_found"))); return; }
-                var comp = new java.util.HashMap<String,Object>(); comp.put("id", rs2.getInt("id")); comp.put("nombre", rs2.getString("nombre")); comp.put("correo", rs2.getString("correo")); comp.put("telefono", rs2.getString("telefono")); comp.put("estado", rs2.getString("estado"));
+                var comp = new java.util.HashMap<String,Object>(); comp.put("id", rs2.getInt("id")); comp.put("publicId", rs2.getObject("public_id") == null ? null : rs2.getInt("public_id")); comp.put("nombre", rs2.getString("nombre")); comp.put("correo", rs2.getString("correo")); comp.put("telefono", rs2.getString("telefono")); comp.put("estado", rs2.getString("estado"));
                 // catalog
                 var rs3 = conn.createStatement().executeQuery("SELECT v.id, v.nombre, v.descripcion, v.precio, v.estado, v.edad_clasificacion FROM Videojuego v WHERE v.empresa_id = " + id);
                 java.util.List<java.util.Map<String,Object>> catalog = new java.util.ArrayList<>(); while (rs3.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rs3.getInt("id")); m.put("nombre", rs3.getString("nombre")); m.put("descripcion", rs3.getString("descripcion")); m.put("precio", rs3.getBigDecimal("precio")); m.put("estado", rs3.getString("estado")); m.put("edad_clasificacion", rs3.getString("edad_clasificacion")); catalog.add(m); }

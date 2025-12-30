@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
@@ -8,7 +9,15 @@ export class AdminService {
   private base = 'http://localhost:8080/backend/api';
   constructor(private http: HttpClient) {}
   listCategories(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.base}/categorias`);
+    return this.http.get<any[]>(`${this.base}/categorias`).pipe(
+      catchError(()=>{
+        try{
+          const raw = localStorage.getItem('local_categories');
+          if(raw) return of(JSON.parse(raw));
+        }catch(e){}
+        return of([]);
+      })
+    );
   }
   createCategory(payload: any) {
     return this.http.post(`${this.base}/categorias`, payload);

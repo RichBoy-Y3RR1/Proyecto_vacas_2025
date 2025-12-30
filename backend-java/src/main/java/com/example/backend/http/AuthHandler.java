@@ -20,10 +20,14 @@ public class AuthHandler implements HttpHandler {
     @Override
     public void handle(HttpExchange ex) {
         try {
-            ex.getResponseHeaders().set("Content-Type", "application/json;charset=UTF-8");
-            ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             String method = ex.getRequestMethod();
             String path = ex.getRequestURI().getPath();
+            System.out.println("AuthHandler: " + method + " " + path + " from " + ex.getRemoteAddress());
+            ex.getResponseHeaders().set("Content-Type", "application/json;charset=UTF-8");
+            ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+            ex.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            if ("OPTIONS".equalsIgnoreCase(method)) { ex.sendResponseHeaders(204, -1); return; }
             if (path.endsWith("/") && path.length()>1) path = path.substring(0,path.length()-1);
             String suffix = "/api/auth";
 
@@ -70,6 +74,7 @@ public class AuthHandler implements HttpHandler {
             }
 
             if ("POST".equalsIgnoreCase(method) && path.endsWith(suffix + "/login")){
+                System.out.println("AuthHandler: login attempt for path="+path);
                 Map body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), Map.class);
                 String email = (String) body.get("email"); String password = (String) body.get("password");
                 if (email != null) email = email.toLowerCase().trim();
@@ -108,5 +113,15 @@ public class AuthHandler implements HttpHandler {
         }
     }
 
-    private void write(HttpExchange ex, int status, String body) throws Exception { byte[] b = body.getBytes(StandardCharsets.UTF_8); ex.sendResponseHeaders(status, b.length); try (OutputStream os = ex.getResponseBody()){ os.write(b); } }
+        private void write(HttpExchange ex, int status, String body) throws Exception {
+            // Ensure CORS headers are always present even if other code paths didn't set them
+            var headers = ex.getResponseHeaders();
+            if (headers.getFirst("Access-Control-Allow-Origin") == null) headers.set("Access-Control-Allow-Origin","*");
+            if (headers.getFirst("Access-Control-Allow-Methods") == null) headers.set("Access-Control-Allow-Methods","GET,POST,PUT,DELETE,OPTIONS");
+            if (headers.getFirst("Access-Control-Allow-Headers") == null) headers.set("Access-Control-Allow-Headers","Content-Type, Authorization");
+            if (headers.getFirst("Content-Type") == null) headers.set("Content-Type","application/json;charset=UTF-8");
+            byte[] b = body.getBytes(StandardCharsets.UTF_8);
+            ex.sendResponseHeaders(status, b.length);
+            try (OutputStream os = ex.getResponseBody()){ os.write(b); }
+        }
 }

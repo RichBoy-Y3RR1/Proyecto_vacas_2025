@@ -14,6 +14,10 @@ public class CorsWrapper implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange) {
         try {
+            // Log incoming request for troubleshooting CORS/routing issues
+            String method = exchange.getRequestMethod();
+            String path = exchange.getRequestURI() != null ? exchange.getRequestURI().getPath() : "<no-path>";
+            System.out.println("CorsWrapper: " + method + " " + path + " -> wrapped handler=" + delegate.getClass().getSimpleName());
             // Use set(...) to avoid creating duplicate header entries when other
             // components also set CORS headers. set(...) replaces existing values.
             exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
@@ -21,6 +25,7 @@ public class CorsWrapper implements HttpHandler {
             exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept");
             exchange.getResponseHeaders().set("Access-Control-Max-Age", "3600");
             if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())){
+                System.out.println("CorsWrapper: Handling preflight for " + path);
                 byte[] empty = new byte[0];
                 exchange.sendResponseHeaders(204, 0);
                 try (OutputStream os = exchange.getResponseBody()){ os.write(empty); }
@@ -28,7 +33,17 @@ public class CorsWrapper implements HttpHandler {
             }
             delegate.handle(exchange);
         } catch (Exception e){
-            try { String err = "{\"error\":\""+ e.getMessage() +"\"}"; byte[] b = err.getBytes(StandardCharsets.UTF_8); exchange.getResponseHeaders().add("Content-Type","application/json;charset=UTF-8"); exchange.sendResponseHeaders(500, b.length); try (OutputStream os = exchange.getResponseBody()){ os.write(b); } } catch(Exception ex){}
+            try {
+                String err = "{\"error\":\""+ e.getMessage() +"\"}";
+                byte[] b = err.getBytes(StandardCharsets.UTF_8);
+                // ensure CORS headers are present on error responses too
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS,PATCH");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept");
+                exchange.getResponseHeaders().add("Content-Type","application/json;charset=UTF-8");
+                exchange.sendResponseHeaders(500, b.length);
+                try (OutputStream os = exchange.getResponseBody()){ os.write(b); }
+            } catch(Exception ex){}
         }
     }
 }

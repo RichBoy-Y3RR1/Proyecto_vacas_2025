@@ -22,6 +22,10 @@ import { AdminCommissionsComponent } from './panels/admin/admin-commissions.comp
 import { AdminReportsComponent } from './panels/admin/admin-reports.component';
 import { AdminGamesComponent } from './panels/admin/admin-games.component';
 import { AdminService } from './services/admin.service';
+import { BibliotecaComponent } from './panels/gamer/biblioteca.component';
+import { ComunidadComponent } from './panels/gamer/comunidad.component';
+import { GruposComponent } from './panels/gamer/grupos.component';
+import { PerfilComponent } from './panels/gamer/perfil.component';
 
 const routes: Routes = [
   { path: '', component: AuthComponent },
@@ -48,6 +52,10 @@ const routes: Routes = [
     GamerPanelComponent,
     GamerProfileComponent,
     GamerLibraryComponent,
+    BibliotecaComponent,
+    ComunidadComponent,
+    GruposComponent,
+    PerfilComponent,
     AdminPanelComponent,
     EmpresaPanelComponent
     ,AdminCategoriesComponent

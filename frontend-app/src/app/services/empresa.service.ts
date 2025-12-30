@@ -5,11 +5,11 @@ import { catchError } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class EmpresaService {
-  // Use relative proxy path so `ng serve --proxy-config` forwards requests to backend
-  private base = '/api';
+  // Use direct backend URL to avoid proxy issues in dev
+  private base = 'http://localhost:8080/backend/api';
   constructor(private http: HttpClient) {}
   listCompanies(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.base}/empresas`).pipe(catchError(err => {
+    return this.http.get<any[]>(`${this.base}/empresa`).pipe(catchError(err => {
       // fallback to locally persisted companies; if none exist, create a small set of demo companies
       try{
         const raw = localStorage.getItem('local_companies');
@@ -28,7 +28,7 @@ export class EmpresaService {
   }
 
   getCompany(id: number) {
-    return this.http.get<any>(`${this.base}/empresas/${id}`).pipe(catchError(_ => {
+    return this.http.get<any>(`${this.base}/empresa/${id}`).pipe(catchError(_ => {
       // try local cache
       try{
         const raw = localStorage.getItem('local_companies');
@@ -39,7 +39,7 @@ export class EmpresaService {
   }
 
   createCompany(payload: any) {
-    return this.http.post(`${this.base}/empresas`, payload).pipe(catchError(err => {
+    return this.http.post(`${this.base}/empresa`, payload).pipe(catchError(err => {
       // persist locally and return the created local object
       try{
         const localKey = 'local_companies';
@@ -54,14 +54,14 @@ export class EmpresaService {
   }
 
   listCompanyUsers(companyId: number) {
-    return this.http.get<any[]>(`${this.base}/empresas/${companyId}/usuarios`).pipe(catchError(_ => {
+    return this.http.get<any[]>(`${this.base}/empresa/${companyId}/usuarios`).pipe(catchError(_ => {
       try{ const raw = localStorage.getItem(`local_users_${companyId}`); if(raw) return of(JSON.parse(raw)); }catch(e){}
       return of([]);
     }));
   }
 
   addCompanyUser(companyId: number, payload: any) {
-    return this.http.post(`${this.base}/empresas/${companyId}/usuarios`, payload).pipe(catchError(_ => {
+    return this.http.post(`${this.base}/empresa/${companyId}/usuarios`, payload).pipe(catchError(_ => {
       // persist locally and return the user
       try{
         const localKey = `local_users_${companyId}`;
@@ -76,9 +76,39 @@ export class EmpresaService {
   }
 
   deleteCompanyUser(companyId: number, userId: number) {
-    return this.http.delete(`${this.base}/empresas/${companyId}/usuarios/${userId}`).pipe(catchError(_ => {
+    return this.http.delete(`${this.base}/empresa/${companyId}/usuarios/${userId}`).pipe(catchError(_ => {
       try{ const localKey = `local_users_${companyId}`; const current = JSON.parse(localStorage.getItem(localKey) || '[]') as any[]; const filtered = current.filter(x=>x.id!==userId); localStorage.setItem(localKey, JSON.stringify(filtered)); return of(true); }catch(e){ return of(null); }
     }));
+  }
+
+  updateCompany(companyId: number, payload: any) {
+    return this.http.put(`${this.base}/empresas/${companyId}`, payload).pipe(catchError(_ => {
+      // fallback: update local_companies cache if present
+      try{
+        const key = 'local_companies';
+        const arr = JSON.parse(localStorage.getItem(key) || '[]') as any[];
+        const idx = arr.findIndex(x=>x.id===companyId);
+        if(idx>=0){ arr[idx] = { ...arr[idx], ...payload }; localStorage.setItem(key, JSON.stringify(arr)); return of(arr[idx]); }
+        const obj = { id: companyId, ...payload };
+        arr.push(obj); localStorage.setItem(key, JSON.stringify(arr)); return of(obj);
+      }catch(e){ return of(null); }
+    }));
+  }
+
+  // JasperReports download helpers (attempt backend PDF, fallback to local export)
+  downloadSalesReport(companyId: number, from?: string, to?: string) {
+    const url = `${this.base}/empresas/${companyId}/reportes/ventas${(from||to)?('?from='+(from||'')+'&to='+(to||'')) : ''}`;
+    return this.http.get(url, { responseType: 'blob' as 'json' }).pipe(catchError(_ => of(null)));
+  }
+
+  downloadFeedbackReport(companyId: number) {
+    const url = `${this.base}/empresas/${companyId}/reportes/feedback`;
+    return this.http.get(url, { responseType: 'blob' as 'json' }).pipe(catchError(_ => of(null)));
+  }
+
+  downloadTopGamesReport(companyId: number, from?: string, to?: string) {
+    const url = `${this.base}/empresas/${companyId}/reportes/top5${(from||to)?('?from='+(from||'')+'&to='+(to||'')) : ''}`;
+    return this.http.get(url, { responseType: 'blob' as 'json' }).pipe(catchError(_ => of(null)));
   }
 }
 

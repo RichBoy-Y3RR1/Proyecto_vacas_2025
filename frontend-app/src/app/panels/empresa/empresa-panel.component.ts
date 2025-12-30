@@ -35,6 +35,12 @@ export class EmpresaPanelComponent implements OnInit {
   // dashboard state
   selectedModule: string = 'catalog';
 
+  // dashboard metrics
+  metrics: { totalGames: number; published: number; avgPrice: number; estimatedRevenue: number } = { totalGames: 0, published: 0, avgPrice: 0, estimatedRevenue: 0 };
+  // report state — explicit properties so template AOT type checking accepts dot-access
+  reportLoading: { ventas: boolean; feedback: boolean; top5: boolean } = { ventas: false, feedback: false, top5: false };
+  reportStatus: { ventas: string; feedback: string; top5: string } = { ventas: '', feedback: '', top5: '' };
+
   newCompanyName = '';
   newUserEmail = '';
   // small UI state for validation
@@ -58,6 +64,53 @@ export class EmpresaPanelComponent implements OnInit {
       // otherwise load company list for admins
       this.loadCompanies();
     });
+  }
+
+  // ---------------------- Billing / Reports ----------------------
+  downloadBlobAsFile(blob: Blob, filename: string){
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(url);
+  }
+
+  async generateSalesReport(from?: string, to?: string){
+    if(!this.selectedCompany) { this.setMessage('error','Selecciona una empresa'); return; }
+    const key = 'ventas'; this.reportLoading[key] = true; this.reportStatus[key] = 'generando';
+    this.svc.downloadSalesReport(this.selectedCompany.id, from, to).subscribe((res:any)=>{
+      this.reportLoading[key] = false;
+      if(res && res.size){ // assume Blob PDF
+        const ts = new Date().toISOString().replace(/[:.]/g,'-');
+        this.downloadBlobAsFile(res, `ventas_${this.selectedCompany.id}_${ts}.pdf`);
+        this.reportStatus[key] = 'ok-backend'; this.setMessage('success','Reporte de ventas descargado (PDF)');
+      } else {
+        // fallback: export local summary as JSON
+        try{
+          const payload = { generatedAt: new Date().toISOString(), metrics: this.metrics, catalog: this.catalog };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          this.downloadBlobAsFile(blob, `ventas_fallback_${this.selectedCompany.id}.json`);
+          this.reportStatus[key] = 'fallback-json'; this.setMessage('info','Backend inaccesible — exportado resumen local (JSON)');
+        }catch(e){ this.reportStatus[key] = 'error'; this.setMessage('error','No se pudo generar reporte'); }
+      }
+    }, err => { this.reportLoading[key]=false; this.reportStatus[key]='error'; this.setMessage('error','Error generando reporte'); });
+  }
+
+  async generateFeedbackReport(){
+    if(!this.selectedCompany) { this.setMessage('error','Selecciona una empresa'); return; }
+    const key='feedback'; this.reportLoading[key]=true; this.reportStatus[key]='generando';
+    this.svc.downloadFeedbackReport(this.selectedCompany.id).subscribe((res:any)=>{
+      this.reportLoading[key]=false;
+      if(res && res.size){ const ts = new Date().toISOString().replace(/[:.]/g,'-'); this.downloadBlobAsFile(res, `feedback_${this.selectedCompany.id}_${ts}.pdf`); this.reportStatus[key]='ok-backend'; this.setMessage('success','Reporte de feedback descargado (PDF)'); }
+      else { this.reportLoading[key]=false; this.reportStatus[key]='fallback-json'; const summary = this.catalog.map(g=>({ id:g.id, nombre:g.nombre, avgRating: g.avgRating||null })); const blob = new Blob([JSON.stringify({generatedAt:new Date().toISOString(), summary},null,2)],{type:'application/json'}); this.downloadBlobAsFile(blob, `feedback_fallback_${this.selectedCompany.id}.json`); this.setMessage('info','Backend inaccesible — exportado feedback local (JSON)'); }
+    }, () => { this.reportLoading[key]=false; this.reportStatus[key]='error'; this.setMessage('error','Error generando reporte de feedback'); });
+  }
+
+  async generateTop5Report(from?: string, to?: string){
+    if(!this.selectedCompany) { this.setMessage('error','Selecciona una empresa'); return; }
+    const key='top5'; this.reportLoading[key]=true; this.reportStatus[key]='generando';
+    this.svc.downloadTopGamesReport(this.selectedCompany.id, from, to).subscribe((res:any)=>{
+      this.reportLoading[key]=false;
+      if(res && res.size){ const ts = new Date().toISOString().replace(/[:.]/g,'-'); this.downloadBlobAsFile(res, `top5_${this.selectedCompany.id}_${ts}.pdf`); this.reportStatus[key]='ok-backend'; this.setMessage('success','Top 5 descargado (PDF)'); }
+      else { this.reportStatus[key]='fallback-json'; const top = (this.catalog||[]).slice(0,5).map(g=>({ id:g.id, nombre:g.nombre, precio:g.precio })); const blob = new Blob([JSON.stringify({generatedAt:new Date().toISOString(), top},null,2)],{type:'application/json'}); this.downloadBlobAsFile(blob, `top5_fallback_${this.selectedCompany.id}.json`); this.setMessage('info','Backend inaccesible — exportado Top5 local (JSON)'); }
+    }, () => { this.reportLoading[key]=false; this.reportStatus[key]='error'; this.setMessage('error','Error generando Top5'); });
   }
 
   loadCompanies(){
@@ -120,6 +173,8 @@ export class EmpresaPanelComponent implements OnInit {
         try { if (localStorage.getItem(`demos_created_${companyId}`)) this.demosCreatedFor.add(companyId); } catch(e){}
         // order and group catalog for display
         this.sortCatalog();
+        // update metrics after catalog is ready
+        this.updateMetrics();
       },
       error: err => {
         // backend not available or returned error — load local cache or built-in demos
@@ -138,8 +193,64 @@ export class EmpresaPanelComponent implements OnInit {
         ];
         this.selectedCompany = { id: companyId, nombre: this.selectedCompany?.nombre || 'Mi Empresa' };
         this.sortCatalog();
+        this.updateMetrics();
       }
     });
+  }
+
+  private updateMetrics(){
+    try{
+      const list = this.catalog || [];
+      const total = list.length;
+      const published = list.filter((x:any)=> (x.estado || (x.for_sale? 'PUBLICADO':'')).toString().toUpperCase()==='PUBLICADO' || x.for_sale).length;
+      const avgPrice = total ? (list.reduce((s:any,i:any)=> s + (Number(i.precio)||0),0) / total) : 0;
+      const estRevenue = list.reduce((s:any,i:any)=> s + (Number(i.precio)||0),0);
+      this.metrics = { totalGames: total, published, avgPrice: Number(avgPrice.toFixed(2)), estimatedRevenue: Number(estRevenue.toFixed(2)) };
+    }catch(e){ /* ignore */ }
+  }
+
+  // helper: get email of logged user (if any)
+  getLoggedUserEmail(): string | null {
+    try{
+      const u: any = (this.auth && (this.auth.getCurrentUser ? this.auth.getCurrentUser() : null));
+      if(!u) return null;
+      // accept multiple possible property names coming from different backends
+      return u.email || u.correo || u.mail || u.username || u.userEmail || null;
+    }catch(e){ return null; }
+  }
+
+  // Toggle company visibility to gamers
+  toggleCompanyVisibility(){
+    if(!this.selectedCompany) return;
+    const cid = this.selectedCompany.id;
+    // determine property name to use
+    const current = this.selectedCompany.visible_to_gamers ?? this.selectedCompany.visible ?? this.selectedCompany.public_visible ?? false;
+    const newVal = !current;
+    // prepare payload (non-destructive)
+    const payload: any = { visible_to_gamers: newVal };
+    // attempt backend update, fallback to local storage update inside service
+    this.svc.updateCompany(cid, payload).subscribe({
+      next: (res:any) => {
+        // update local UI copy
+        try{ this.selectedCompany = { ...this.selectedCompany, ...res, visible_to_gamers: newVal }; this.setMessage('success', newVal ? 'Empresa visible para gamers' : 'Empresa ocultada a gamers'); this.updateMetrics(); }catch(e){ this.setMessage('success','Visibilidad actualizada'); }
+      },
+      error: () => {
+        // update local cache directly if service fallback didn't work
+        try{
+          const key = 'local_companies'; const arr = JSON.parse(localStorage.getItem(key) || '[]') as any[]; const idx = arr.findIndex(x=>x.id===cid);
+          if(idx>=0){ arr[idx].visible_to_gamers = newVal; localStorage.setItem(key, JSON.stringify(arr)); this.selectedCompany.visible_to_gamers = newVal; this.setMessage('success','Visibilidad guardada localmente'); return; }
+        }catch(e){}
+        this.setMessage('error','No se pudo cambiar visibilidad');
+      }
+    });
+  }
+
+  // helper: read creation date from various possible fields
+  getCompanyCreationDate(): string | null {
+    if(!this.selectedCompany) return null;
+    const candidates = ['createdAt','created_at','fecha_registro','fechaRegistro','creado_en','created'];
+    for(const k of candidates){ if(this.selectedCompany[k]){ try{ const d = new Date(this.selectedCompany[k]); if(!isNaN(d.getTime())) return d.toLocaleDateString(); }catch(e){ return String(this.selectedCompany[k]); } } }
+    return null;
   }
 
   createCompany(){
@@ -322,6 +433,30 @@ export class EmpresaPanelComponent implements OnInit {
       },
       error: () => this.error = 'No se pudo eliminar videojuego'
     });
+  }
+
+  // Send a game to admin for approval (mark estado = 'PENDIENTE')
+  sendToAdmin(g:any){
+    if(!this.selectedCompany) { this.setMessage('error','Selecciona una empresa'); return; }
+    const id = g.id;
+    if(id && id > 0){
+      this.juegoSvc.update(id, { estado: 'PENDIENTE' }).subscribe({
+        next: (res:any)=>{ this.setMessage('success','Juego enviado a admin para aprobación'); this.loadCatalog(this.selectedCompany.id); },
+        error: ()=>{ this.setMessage('error','No se pudo enviar al backend; intenta de nuevo'); }
+      });
+      return;
+    }
+    // local item: update local cache and UI
+    try{
+      const key = `local_catalog_${this.selectedCompany.id}`;
+      const current = JSON.parse(localStorage.getItem(key) || '[]') as any[];
+      const idx = current.findIndex(x=>x.id===id);
+      if(idx>=0){ current[idx].estado = 'PENDIENTE'; localStorage.setItem(key, JSON.stringify(current)); }
+      // update in-memory catalog
+      const ci = this.catalog.findIndex(x=>x.id===id); if(ci>=0) this.catalog[ci].estado = 'PENDIENTE';
+      this.sortCatalog();
+      this.setMessage('success','Juego marcado como PENDIENTE localmente');
+    }catch(e){ this.setMessage('error','No se pudo marcar juego como pendiente'); }
   }
 
   // Create demo/example games for this company

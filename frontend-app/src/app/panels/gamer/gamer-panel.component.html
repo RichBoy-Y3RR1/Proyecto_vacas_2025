@@ -1,14 +1,90 @@
-<div class="gamer-panel">
-  <h2>Gamer Panel</h2>
-  <p *ngIf="user">Bienvenido, {{ user.name || user.email }}</p>
+<div class="gamer-root">
+  <aside class="sidebar">
+    <div class="brand">Tienda Gamer</div>
+    <div class="greeting">Bienvenido, <strong>{{user.nickname}}</strong></div>
+    <div class="balance">Saldo: <strong>{{balance | currency:'USD'}}</strong></div>
+    <nav>
+      <button (click)="select('store')" [class.active]="activeTab==='store'">🏠 Tienda</button>
+      <button (click)="select('library')" [class.active]="activeTab==='library'">🎮 Biblioteca</button>
+      <button (click)="select('wallet')" [class.active]="activeTab==='wallet'">💰 Cartera</button>
+      <button (click)="select('community')" [class.active]="activeTab==='community'">💬 Comunidad</button>
+      <button (click)="select('families')" [class.active]="activeTab==='families'">👥 Grupos</button>
+      <button (click)="select('reports')" [class.active]="activeTab==='reports'">📊 Reportes</button>
+      <button (click)="select('profile')" [class.active]="activeTab==='profile'">⚙️ Perfil</button>
+    </nav>
+  </aside>
 
-  <nav>
-    <button (click)="view='profile'">Perfil</button>
-    <button (click)="view='library'">Biblioteca</button>
-  </nav>
+  <main class="content">
+    <section *ngIf="activeTab==='store'">
+      <h1>Tienda</h1>
+      <div class="grid">
+        <div class="card" *ngFor="let g of storeGames">
+          <img [src]="g.image || 'https://via.placeholder.com/320x180?text=No+Image'" alt="cover"/>
+          <h3>{{g.title}}</h3>
+          <p class="meta">{{g.categories?.join(', ')}} • {{g.ageRating}}</p>
+          <div class="row">
+            <div class="price">{{g.price | currency:'USD'}}</div>
+            <div class="rating">⭐ {{g.avgRating||0}}</div>
+          </div>
+          <div class="actions">
+            <button (click)="openDetail(g)">Ver más</button>
+            <button (click)="purchase(g)">Comprar</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <section>
-    <app-gamer-profile *ngIf="view==='profile'"></app-gamer-profile>
-    <app-gamer-library *ngIf="view==='library'"></app-gamer-library>
-  </section>
+    <section *ngIf="activeTab==='library'">
+      <app-biblioteca></app-biblioteca>
+    </section>
+
+    <section *ngIf="activeTab==='wallet'">
+      <h1>Cartera</h1>
+      <p>Saldo: <strong>{{balance | currency:'USD'}}</strong></p>
+      <button (click)="recharge()">Recargar</button>
+      <h3>Historial</h3>
+      <ul>
+        <li *ngFor="let t of transactions">{{t.date}} - {{t.description}} - {{t.amount | currency:'USD'}}</li>
+      </ul>
+    </section>
+
+    <section *ngIf="activeTab==='reports'">
+      <h1>Reportes</h1>
+      <div class="report-actions">
+        <button (click)="generate('expenses')">Generar Historial de Gastos (PDF)</button>
+        <button (click)="generate('library')">Generar Análisis de Biblioteca (PDF)</button>
+        <button (click)="generate('families')">Generar Uso Familiar (PDF)</button>
+      </div>
+      <div *ngIf="loadingReport" class="report-preview">Generando reporte...</div>
+      <div *ngIf="reportPreview" class="report-preview">
+        <h3>Vista previa: {{reportPreview?.title || 'Datos'}}</h3>
+        <div *ngIf="reportPreview.hasData === false" class="report-empty">
+          <p>{{reportPreview.message || 'No hay datos para este reporte aún.'}}</p>
+        </div>
+        <div *ngIf="reportPreview.hasData !== false" class="chart">
+          <svg width="100%" height="220" viewBox="0 0 600 220" preserveAspectRatio="none">
+            <g *ngIf="reportPreview.series">
+              <!-- draw simple bars -->
+              <ng-container *ngFor="let v of reportPreview.series; let i = index">
+                <rect [attr.x]="10 + i*(560/reportPreview.series.length)" [attr.y]="200 - (v/max(reportPreview.series))*160" [attr.width]="(520/reportPreview.series.length)" [attr.height]="(v/max(reportPreview.series))*160" fill="#1f6feb"></rect>
+                <text [attr.x]="10 + i*(560/reportPreview.series.length) + 10" y="210" fill="#ddd" font-size="11">{{reportPreview.labels?.[i]}}</text>
+              </ng-container>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section *ngIf="activeTab==='community'">
+      <app-comunidad></app-comunidad>
+    </section>
+
+    <section *ngIf="activeTab==='families'">
+      <app-grupos></app-grupos>
+    </section>
+
+    <section *ngIf="activeTab==='profile'">
+      <app-perfil></app-perfil>
+    </section>
+  </main>
 </div>

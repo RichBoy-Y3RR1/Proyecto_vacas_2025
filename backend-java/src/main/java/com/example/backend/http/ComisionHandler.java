@@ -24,31 +24,59 @@ public class ComisionHandler implements HttpHandler {
 
             if ("OPTIONS".equalsIgnoreCase(method)) { ex.getResponseHeaders().set("Access-Control-Allow-Methods","GET,POST,PUT,DELETE,OPTIONS"); ex.getResponseHeaders().set("Access-Control-Allow-Headers","Content-Type,Authorization"); write(ex,204,""); return; }
 
+            // GET -> return global percent and per-company percents
             if ("GET".equalsIgnoreCase(method) && (path.endsWith(suffixes[0]) || path.endsWith(suffixes[1]))){
-                var rs = conn.createStatement().executeQuery("SELECT id, porcentaje FROM Comision");
-                java.util.List<java.util.Map<String,Object>> list = new java.util.ArrayList<>();
-                while (rs.next()){ var m = new java.util.HashMap<String,Object>(); m.put("id", rs.getInt("id")); m.put("porcentaje", rs.getBigDecimal("porcentaje")); list.add(m); }
-                write(ex,200,gson.toJson(list)); return;
-            }
-            if ("POST".equalsIgnoreCase(method) && (path.endsWith(suffixes[0]) || path.endsWith(suffixes[1]))){
-                var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);
-                java.math.BigDecimal pct = body.get("porcentaje") instanceof Number ? new java.math.BigDecimal(((Number)body.get("porcentaje")).toString()) : new java.math.BigDecimal("0");
-                var ps = conn.prepareStatement("INSERT INTO Comision (porcentaje) VALUES (?)", java.sql.PreparedStatement.RETURN_GENERATED_KEYS);
-                ps.setBigDecimal(1, pct); ps.executeUpdate(); var rs = ps.getGeneratedKeys(); Integer id = null; if (rs.next()) id = rs.getInt(1);
-                write(ex,201,gson.toJson(java.util.Map.of("id", id))); return;
+                java.math.BigDecimal global = new java.math.BigDecimal("0");
+                try (var rs = conn.createStatement().executeQuery("SELECT percent FROM Comision_Global WHERE id = 1")){ if (rs.next()) global = rs.getBigDecimal("percent"); }
+                var rs2 = conn.createStatement().executeQuery("SELECT empresa_id, percent FROM Comision_Empresa");
+                java.util.List<java.util.Map<String,Object>> empresas = new java.util.ArrayList<>();
+                while (rs2.next()){ var m = new java.util.HashMap<String,Object>(); m.put("empresaId", rs2.getInt("empresa_id")); m.put("percent", rs2.getBigDecimal("percent")); empresas.add(m); }
+                write(ex,200,gson.toJson(java.util.Map.of("global", global, "empresas", empresas))); return;
             }
 
-            // update by id
-            if ("PUT".equalsIgnoreCase(method) && (path.contains(suffixes[0] + "/") || path.contains(suffixes[1] + "/"))){
-                String idStr = path.substring(path.lastIndexOf('/')+1); Integer id = Integer.parseInt(idStr);
+            // PUT -> update global or company-specific commission
+            if ("PUT".equalsIgnoreCase(method) && (path.endsWith(suffixes[0]) || path.endsWith(suffixes[1]) || path.contains(suffixes[0] + "/empresa/") || path.contains(suffixes[1] + "/empresa/"))){
                 var body = gson.fromJson(new InputStreamReader(ex.getRequestBody(), StandardCharsets.UTF_8), java.util.Map.class);
-                java.math.BigDecimal pct = body.get("porcentaje") instanceof Number ? new java.math.BigDecimal(((Number)body.get("porcentaje")).toString()) : new java.math.BigDecimal("0");
-                var ps = conn.prepareStatement("UPDATE Comision SET porcentaje = ? WHERE id = ?"); ps.setBigDecimal(1,pct); ps.setInt(2,id); int updated = ps.executeUpdate(); write(ex,200,gson.toJson(java.util.Map.of("updated", updated))); return;
-            }
+                // obtain current global
+                java.math.BigDecimal currentGlobal = new java.math.BigDecimal("0");
+                try (var rs = conn.createStatement().executeQuery("SELECT percent FROM Comision_Global WHERE id = 1")){ if (rs.next()) currentGlobal = rs.getBigDecimal("percent"); }
 
-            if ("DELETE".equalsIgnoreCase(method) && (path.contains(suffixes[0] + "/") || path.contains(suffixes[1] + "/"))){
-                String idStr = path.substring(path.lastIndexOf('/')+1); Integer id = Integer.parseInt(idStr);
-                var ps = conn.prepareStatement("DELETE FROM Comision WHERE id = ?"); ps.setInt(1,id); int deleted = ps.executeUpdate(); write(ex,200,gson.toJson(java.util.Map.of("deleted", deleted))); return;
+                // If path contains /empresa/{id} treat as company update
+                Integer pathEmpresaId = null;
+                if (path.contains("/empresa/")){
+                    String idStr = path.substring(path.indexOf("/empresa/") + "/empresa/".length());
+                    try { pathEmpresaId = Integer.valueOf(idStr.split("/")[0]); } catch(Exception exx){ pathEmpresaId = null; }
+                }
+
+                // prefer company id from path, otherwise from body (accept empresa_id or empresaId)
+                Integer empresaId = pathEmpresaId != null ? pathEmpresaId : (body.get("empresaId") instanceof Number ? ((Number)body.get("empresaId")).intValue() : (body.get("empresa_id") instanceof Number ? ((Number)body.get("empresa_id")).intValue() : null));
+
+                // support frontend keys: globalPercent for global, empresa_id for company id
+                boolean hasGlobalKey = body.containsKey("global") || body.containsKey("globalPercent") || (body.containsKey("percent") && empresaId==null);
+                if (hasGlobalKey){
+                    // update global percent
+                    String val = body.containsKey("global") ? String.valueOf(body.get("global")) : (body.containsKey("globalPercent") ? String.valueOf(body.get("globalPercent")) : String.valueOf(body.get("percent")));
+                    java.math.BigDecimal newGlobal = new java.math.BigDecimal(val);
+                    var ps = conn.prepareStatement("UPDATE Comision_Global SET percent = ? WHERE id = 1"); ps.setBigDecimal(1, newGlobal); int updated = ps.executeUpdate();
+                    // if decreased, clamp company percents
+                    if (newGlobal.compareTo(currentGlobal) < 0){ var ps2 = conn.prepareStatement("UPDATE Comision_Empresa SET percent = ? WHERE percent > ?"); ps2.setBigDecimal(1, newGlobal); ps2.setBigDecimal(2, newGlobal); ps2.executeUpdate(); }
+                    write(ex,200,gson.toJson(java.util.Map.of("updated", updated))); return;
+                }
+
+                if (empresaId != null){
+                    // validate empresa exists
+                    try (var prs = conn.prepareStatement("SELECT id FROM Empresa WHERE id = ?")){ prs.setInt(1, empresaId); var r = prs.executeQuery(); if (!r.next()){ write(ex,404,gson.toJson(java.util.Map.of("error","company_not_found"))); return; } }
+                    java.math.BigDecimal newPct = body.get("percent") instanceof Number ? new java.math.BigDecimal(((Number)body.get("percent")).toString()) : new java.math.BigDecimal(String.valueOf(body.getOrDefault("percent","0")));
+                    // enforce not exceeding global
+                    java.math.BigDecimal currentG = currentGlobal;
+                    if (newPct.compareTo(currentG) > 0){ write(ex,400,gson.toJson(java.util.Map.of("error","percent_exceeds_global","global", currentG))); return; }
+                    // try update, else insert
+                    var ups = conn.prepareStatement("UPDATE Comision_Empresa SET percent = ? WHERE empresa_id = ?"); ups.setBigDecimal(1, newPct); ups.setInt(2, empresaId); int u = ups.executeUpdate(); if (u==0){ var ins = conn.prepareStatement("INSERT INTO Comision_Empresa (empresa_id, percent) VALUES (?,?)"); ins.setInt(1, empresaId); ins.setBigDecimal(2, newPct); ins.executeUpdate(); }
+                    write(ex,200,gson.toJson(java.util.Map.of("empresaId", empresaId, "percent", newPct))); return;
+                }
+
+                write(ex,400,gson.toJson(java.util.Map.of("error","missing_parameters")));
+                return;
             }
 
             write(ex,405,gson.toJson(java.util.Map.of("error","method not allowed")));
